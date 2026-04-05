@@ -16,7 +16,9 @@ export function formatMessageTime(date: string | Date): string {
 export function formatDateDivider(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date
   const now = new Date()
-  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const diffDays = Math.round((today.getTime() - msgDay.getTime()) / (1000 * 60 * 60 * 24))
 
   if (diffDays === 0) { return 'Today' }
   if (diffDays === 1) { return 'Yesterday' }
