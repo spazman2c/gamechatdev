@@ -9,8 +9,8 @@ const EnvSchema = z.object({
   // Database
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid connection string'),
 
-  // Redis
-  REDIS_URL: z.string().url('REDIS_URL must be a valid URL'),
+  // Redis (optional — app degrades gracefully without it)
+  REDIS_URL: z.string().url().optional(),
 
   // JWT
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),

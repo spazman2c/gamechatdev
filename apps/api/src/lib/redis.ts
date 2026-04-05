@@ -4,25 +4,36 @@ import { env } from './env.js'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Redis = (ioredis as any).default ?? ioredis
 
-export const redis = new Redis(env.REDIS_URL, {
-  maxRetriesPerRequest: 1,
-  lazyConnect: true,
-  enableReadyCheck: false,
-  retryStrategy: () => null, // don't retry — fail fast in dev
-})
-
 export let redisAvailable = false
 
-redis.on('error', () => {
-  // Silently swallow — we handle unavailability at startup
-})
+// If no REDIS_URL is configured, skip Redis entirely
+const redisUrl = env.REDIS_URL
 
-redis.on('connect', () => {
-  redisAvailable = true
-  console.warn('[Redis] Connected')
-})
+export const redis: InstanceType<typeof Redis> = redisUrl
+  ? new Redis(redisUrl, {
+      maxRetriesPerRequest: 1,
+      lazyConnect: true,
+      enableReadyCheck: false,
+      retryStrategy: () => null,
+    })
+  : null
+
+if (redis) {
+  redis.on('error', () => {
+    // Silently swallow — we handle unavailability at startup
+  })
+
+  redis.on('connect', () => {
+    redisAvailable = true
+    console.warn('[Redis] Connected')
+  })
+}
 
 export async function connectRedis(): Promise<boolean> {
+  if (!redis) {
+    console.warn('[Redis] No REDIS_URL configured — running without Redis')
+    return false
+  }
   try {
     await redis.connect()
     await redis.ping()
