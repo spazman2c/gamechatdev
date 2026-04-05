@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { RegisterSchema, type RegisterInput } from '@nexora/schemas'
@@ -10,7 +11,7 @@ import { Input } from '@nexora/ui/input'
 import { api } from '@/lib/api'
 
 export default function RegisterPage() {
-  const [success, setSuccess] = useState(false)
+  const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
@@ -25,27 +26,13 @@ export default function RegisterPage() {
     setServerError(null)
     try {
       await api.post('/auth/register', data)
-      setSuccess(true)
+      router.push('/login')
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Something went wrong. Please try again.'
       setServerError(msg)
     }
-  }
-
-  if (success) {
-    return (
-      <div className="text-center py-4">
-        <div className="text-4xl mb-4">📬</div>
-        <h2 className="font-brand text-xl font-bold text-[var(--text-primary)] mb-2">
-          Check your email
-        </h2>
-        <p className="text-[var(--text-secondary)] text-sm">
-          We&apos;ve sent a verification link to your email. Click it to activate your account.
-        </p>
-      </div>
-    )
   }
 
   return (

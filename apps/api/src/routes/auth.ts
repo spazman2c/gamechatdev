@@ -16,7 +16,7 @@ import {
   ForgotPasswordSchema,
   ResetPasswordSchema,
 } from '@nexora/schemas'
-import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email.js'
+import { sendPasswordResetEmail } from '../services/email.js'
 
 const REFRESH_COOKIE = 'nx_refresh'
 const COOKIE_OPTIONS = {
@@ -50,29 +50,14 @@ export async function authRoutes(app: FastifyInstance) {
         email: body.email,
         passwordHash,
         displayName: body.displayName ?? body.username,
-        // Auto-verify in development so local testing works without SMTP
-        emailVerified: env.NODE_ENV === 'development',
+        emailVerified: true,
       })
       .returning()
 
     if (!user) { throw Errors.INTERNAL() }
 
-    // Create email verification token
-    const verifyToken = nanoid(40)
-    await db.insert(schema.emailVerifications).values({
-      userId: user.id,
-      token: verifyToken,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    })
-
-    try {
-      await sendVerificationEmail(user.email, user.displayName ?? user.username, verifyToken)
-    } catch (emailErr) {
-      console.warn('[Auth] Failed to send verification email:', emailErr instanceof Error ? emailErr.message : emailErr)
-    }
-
     return reply.code(201).send({
-      message: 'Account created. Please check your email to verify your account.',
+      message: 'Account created successfully.',
       userId: user.id,
     })
   })
@@ -118,7 +103,6 @@ export async function authRoutes(app: FastifyInstance) {
     const passwordMatch = await compare(body.password, user.passwordHash)
     if (!passwordMatch) { throw Errors.INVALID_CREDENTIALS() }
 
-    if (!user.emailVerified) { throw Errors.EMAIL_NOT_VERIFIED() }
 
     const jti = nanoid(21)
     const accessToken = signAccessToken({ sub: user.id, username: user.username })
