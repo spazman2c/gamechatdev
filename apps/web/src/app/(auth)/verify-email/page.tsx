@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Spinner } from '@nexora/ui/spinner'
 import { api } from '@/lib/api'
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -67,5 +67,18 @@ export default function VerifyEmailPage() {
         Back to registration
       </Link>
     </div>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center gap-4 py-8">
+        <Spinner size="lg" />
+        <p className="text-[var(--text-secondary)]">Loading…</p>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }
