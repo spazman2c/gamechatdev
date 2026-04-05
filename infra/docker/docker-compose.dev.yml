@@ -1,0 +1,30 @@
+# Extend base docker-compose for dev: mounts source, hot reload
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: ../../
+      dockerfile: apps/api/Dockerfile.dev
+    container_name: nexora_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '3001:3001'
+    volumes:
+      - ../../apps/api:/app/apps/api
+      - ../../packages:/app/packages
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://nexora:nexora_dev_password@postgres:5432/nexora
+      REDIS_URL: redis://:nexora_redis_password@redis:6379
+      LIVEKIT_URL: http://livekit:7880
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: devsecret
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
