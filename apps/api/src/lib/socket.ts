@@ -56,12 +56,43 @@ export function createSocketServer(httpServer: HttpServer) {
     // Track which voice rooms this socket is in (for cleanup on disconnect)
     const activeVoiceRooms = new Set<string>()
 
-    // Set presence
-    if (redisAvailable) {
-      await redis.set(RedisKeys.presence(userId), 'online', 'EX', RedisKeys.presenceTTL)
+    // ── Presence helpers ──────────────────────────────────────────────────────
+
+    // null = auto-managed (online or auto-away), otherwise the user's explicit choice
+    let manualPresence: string | null = null
+    let isAutoAway = false
+    const INACTIVITY_MS = 15 * 60 * 1000 // 15 minutes
+
+    async function setPresenceStatus(status: string) {
+      const updates: Promise<unknown>[] = [
+        db.update(schema.users).set({ presence: status }).where(eq(schema.users.id, userId)),
+      ]
+      if (redisAvailable) {
+        updates.push(redis.set(RedisKeys.presence(userId), status, 'EX', RedisKeys.presenceTTL))
+      }
+      await Promise.all(updates)
+      // Broadcast to all sockets (including other tabs of this user)
+      io.emit('presence:changed', { userId, status })
     }
 
-    // Heartbeat to keep presence alive
+    let inactivityTimer: ReturnType<typeof setTimeout> | null = null
+
+    function resetInactivityTimer() {
+      if (inactivityTimer) { clearTimeout(inactivityTimer) }
+      // Don't start timer when user has manually set a non-online status
+      if (manualPresence !== null && manualPresence !== 'online') { return }
+      inactivityTimer = setTimeout(async () => {
+        if (manualPresence !== null && manualPresence !== 'online') { return }
+        isAutoAway = true
+        await setPresenceStatus('away')
+      }, INACTIVITY_MS)
+    }
+
+    // Set user online on connect; seed inactivity timer
+    await setPresenceStatus('online')
+    resetInactivityTimer()
+
+    // Heartbeat to keep presence alive in Redis
     const heartbeat = setInterval(async () => {
       if (redisAvailable) {
         await redis.expire(RedisKeys.presence(userId), RedisKeys.presenceTTL)
@@ -232,16 +263,30 @@ export function createSocketServer(httpServer: HttpServer) {
       socket.to(`channel:${channelId}`).emit('typing:update', { channelId, userId, username, typing: false })
     })
 
-    // ── Presence update ──
-    socket.on('presence:update', async ({ status }: { status: string }) => {
-      const updates: Promise<unknown>[] = [
-        db.update(schema.users).set({ presence: status }).where(eq(schema.users.id, userId)),
-      ]
-      if (redisAvailable) {
-        updates.push(redis.set(RedisKeys.presence(userId), status, 'EX', RedisKeys.presenceTTL))
+    // ── Presence activity (frontend emits this on user input, throttled to 1/min) ──
+    socket.on('presence:activity', async () => {
+      if (isAutoAway) {
+        // User came back — revert auto-away to online
+        isAutoAway = false
+        await setPresenceStatus('online')
       }
-      await Promise.all(updates)
-      socket.broadcast.emit('presence:changed', { userId, status })
+      resetInactivityTimer()
+    })
+
+    // ── Presence update (manual selection from picker) ──
+    socket.on('presence:update', async ({ status }: { status: string }) => {
+      if (status === 'online') {
+        // Back to auto-managed: clear manual override, restart inactivity timer
+        manualPresence = null
+        isAutoAway = false
+        resetInactivityTimer()
+      } else {
+        // Manual override: freeze at this status, cancel inactivity timer
+        manualPresence = status
+        isAutoAway = false
+        if (inactivityTimer) { clearTimeout(inactivityTimer) }
+      }
+      await setPresenceStatus(status)
     })
 
     // ── Join a personal room so other sockets can target this user directly ──
@@ -251,6 +296,7 @@ export function createSocketServer(httpServer: HttpServer) {
     // ── Disconnect ──
     socket.on('disconnect', async () => {
       clearInterval(heartbeat)
+      if (inactivityTimer) { clearTimeout(inactivityTimer) }
 
       // Leave all voice rooms
       for (const channelId of activeVoiceRooms) {

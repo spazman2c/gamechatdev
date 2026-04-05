@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/auth'
 import { useSocket } from '@/hooks/use-socket'
+import { usePresence } from '@/hooks/use-presence'
 import { getOrRefreshToken } from '@/lib/api'
 import { SpaceRail } from './space-rail'
 import { LivePulseBar } from './live-pulse-bar'
@@ -55,6 +56,7 @@ export function AppShell({ children }: AppShellProps) {
 // re-renders — the voice connection persists across all navigation.
 function AppShellInner({ children }: AppShellProps) {
   useSocket()
+  usePresence()
 
   return (
     <VoiceSessionProvider>
