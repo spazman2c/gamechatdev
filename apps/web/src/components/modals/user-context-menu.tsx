@@ -73,7 +73,7 @@ export function UserContextMenu() {
         username={target.username}
         displayName={target.displayName}
         anchor={anchor}
-        channelId={channelId}
+        channelId={channelId ?? null}
         onClose={close}
       />
     </div>

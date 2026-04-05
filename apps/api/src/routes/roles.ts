@@ -41,7 +41,7 @@ export async function roleRoutes(app: FastifyInstance) {
         hubId,
         name: body.name,
         color: body.color ?? null,
-        permissions: body.permissions,
+        permissions: Number(body.permissions),
         position: 999,
       })
       .returning()
