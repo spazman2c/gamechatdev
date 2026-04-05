@@ -19,9 +19,6 @@ export function getIO(): SocketServer | null {
 const roomKey = (channelId: string) => `voice:room:${channelId}`
 
 export function createSocketServer(httpServer: HttpServer) {
-  const pubClient = redis
-  const subClient = redis.duplicate()
-
   const io = new SocketServer(httpServer, {
     cors: {
       origin: process.env['CORS_ORIGIN']?.split(',') ?? ['http://localhost:3000'],
@@ -32,8 +29,9 @@ export function createSocketServer(httpServer: HttpServer) {
 
   _io = io
 
-  if (redisAvailable) {
-    io.adapter(createAdapter(pubClient, subClient))
+  if (redisAvailable && redis) {
+    const subClient = redis.duplicate()
+    io.adapter(createAdapter(redis, subClient))
   }
 
   // ── Auth middleware ──
