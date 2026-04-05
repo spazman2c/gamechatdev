@@ -3,7 +3,7 @@ import { createHash } from 'crypto'
 import bcrypt from 'bcryptjs'
 const { hash, compare } = bcrypt
 import { nanoid } from 'nanoid'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, lt } from 'drizzle-orm'
 import { db, schema } from '../db/index.js'
 import { env } from '../lib/env.js'
 import { redis, RedisKeys } from '../lib/redis.js'
