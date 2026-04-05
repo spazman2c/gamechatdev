@@ -112,15 +112,25 @@ export async function messageRoutes(app: FastifyInstance) {
 
     if (!message) { throw Errors.INTERNAL() }
 
-    // Save attachments if provided
-    if (body.attachmentUrls?.length) {
-      await db.insert(schema.messageAttachments).values(
-        body.attachmentUrls.map((url: string) => ({
+    // Save attachments — prefer rich metadata, fall back to plain URL array
+    const attachmentsToSave = body.attachments?.length
+      ? body.attachments.map((a: { url: string; filename?: string | null; contentType?: string | null; sizeBytes?: number | null }) => ({
+          messageId: message.id,
+          url: a.url,
+          filename: a.filename ?? a.url.split('/').pop()?.split('?')[0] ?? null,
+          contentType: a.contentType ?? null,
+          sizeBytes: a.sizeBytes ?? null,
+        }))
+      : (body.attachmentUrls ?? []).map((url: string) => ({
           messageId: message.id,
           url,
-          filename: url.split('/').pop() ?? null,
-        })),
-      )
+          filename: url.split('/').pop()?.split('?')[0] ?? null,
+          contentType: null,
+          sizeBytes: null,
+        }))
+
+    if (attachmentsToSave.length) {
+      await db.insert(schema.messageAttachments).values(attachmentsToSave)
     }
 
     // Fetch full message with author for broadcast

@@ -14,6 +14,8 @@ interface PendingAttachment {
   file: File
   previewUrl: string | null
   publicUrl: string | null
+  contentType: string
+  sizeBytes: number
   uploading: boolean
   error: boolean
 }
@@ -53,8 +55,11 @@ export function MessageInput({
     setTimeout(() => textareaRef.current?.focus(), 0)
   }, [pendingMention])
   const sendMutation = useMutation({
-    mutationFn: (body: { content: string; replyToId?: string; attachmentUrls?: string[] }) =>
-      api.post<Message>('/messages', body, { params: { channelId } }),
+    mutationFn: (body: {
+      content: string
+      replyToId?: string
+      attachments?: { url: string; filename: string; contentType: string; sizeBytes: number }[]
+    }) => api.post<Message>('/messages', body, { params: { channelId } }),
     onError: () => notify.error('Failed to send message'),
   })
 
@@ -111,33 +116,54 @@ export function MessageInput({
     }
   }, [])
 
-  const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files ?? [])
+  const addFiles = useCallback(
+    (files: File[]) => {
       if (!files.length) { return }
-
       const newAttachments: PendingAttachment[] = files.map((file) => ({
         file,
         previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
         publicUrl: null,
+        contentType: file.type,
+        sizeBytes: file.size,
         uploading: false,
         error: false,
       }))
-
       setAttachments((prev) => {
         const startIndex = prev.length
-        const next = [...prev, ...newAttachments]
-        // Start uploads
-        newAttachments.forEach((_, i) => {
-          uploadFile(files[i]!, startIndex + i)
-        })
-        return next
+        newAttachments.forEach((_, i) => uploadFile(files[i]!, startIndex + i))
+        return [...prev, ...newAttachments]
       })
-
-      // Reset input so same file can be reselected
-      e.target.value = ''
     },
     [uploadFile],
+  )
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      addFiles(Array.from(e.target.files ?? []))
+      e.target.value = ''
+    },
+    [addFiles],
+  )
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const imageFiles = Array.from(e.clipboardData.items)
+        .filter((item) => item.type.startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => f !== null)
+
+      if (imageFiles.length === 0) { return }
+
+      // Give pasted images a sensible filename based on type
+      const namedFiles = imageFiles.map((file) => {
+        const ext = file.type.split('/')[1] ?? 'png'
+        return new File([file], `image-${Date.now()}.${ext}`, { type: file.type })
+      })
+
+      e.preventDefault() // stop browser inserting raw image data as text
+      addFiles(namedFiles)
+    },
+    [addFiles],
   )
 
   const removeAttachment = useCallback((index: number) => {
@@ -159,12 +185,19 @@ export function MessageInput({
       return
     }
 
-    const attachmentUrls = attachments.filter((a) => a.publicUrl).map((a) => a.publicUrl!)
+    const readyAttachments = attachments
+      .filter((a) => a.publicUrl)
+      .map((a) => ({
+        url: a.publicUrl!,
+        filename: a.file.name,
+        contentType: a.contentType,
+        sizeBytes: a.sizeBytes,
+      }))
 
     sendMutation.mutate({
       content: trimmed,
       ...(replyTo?.id !== undefined && { replyToId: replyTo.id }),
-      attachmentUrls,
+      ...(readyAttachments.length > 0 && { attachments: readyAttachments }),
     })
 
     setContent('')
@@ -291,6 +324,7 @@ export function MessageInput({
             handleTyping()
           }}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder={`Message #${channelName}`}
           disabled={disabled}
           rows={1}

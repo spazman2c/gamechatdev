@@ -165,26 +165,38 @@ export function MessageBubble({ message, isOwn, grouped, onReply }: MessageBubbl
 
         {/* Attachments */}
         {message.attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="flex flex-col gap-2 mt-2">
             {message.attachments.map((att) => (
-              att.contentType?.startsWith('image/') ? (
-                <img
+              isImageAttachment(att) ? (
+                <a
                   key={att.id}
-                  src={att.url}
-                  alt={att.filename ?? 'Attachment'}
-                  className="max-w-sm max-h-64 rounded-[var(--radius-sm)] object-cover border border-[var(--border-subtle)]"
-                  loading="lazy"
-                />
+                  href={att.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block"
+                  title="Open image in new tab"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={att.url}
+                    alt={att.filename ?? 'Image'}
+                    className="max-w-sm max-h-80 rounded-[var(--radius-sm)] object-contain border border-[var(--border-subtle)] hover:opacity-90 transition-opacity cursor-zoom-in"
+                    loading="lazy"
+                  />
+                  {att.filename && (
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{att.filename}</p>
+                  )}
+                </a>
               ) : (
                 <a
                   key={att.id}
                   href={att.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-2 bg-[var(--surface-panel)] border border-[var(--border-default)] rounded-[var(--radius-sm)] text-sm text-[var(--text-link)] hover:underline"
+                  className="flex items-center gap-2 px-3 py-2 bg-[var(--surface-panel)] border border-[var(--border-default)] rounded-[var(--radius-sm)] text-sm text-[var(--text-link)] hover:underline w-fit"
                 >
                   {att.filename ?? 'File'}
-                  {att.sizeBytes && (
+                  {att.sizeBytes != null && (
                     <span className="text-xs text-[var(--text-muted)]">
                       ({formatBytes(att.sizeBytes)})
                     </span>
@@ -305,4 +317,14 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) { return `${bytes} B` }
   if (bytes < 1024 * 1024) { return `${(bytes / 1024).toFixed(1)} KB` }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif', 'bmp'])
+
+function isImageAttachment(att: { url: string; contentType?: string | null }): boolean {
+  if (att.contentType?.startsWith('image/')) { return true }
+  // Fallback: infer from URL extension (handles old attachments saved without contentType)
+  const urlWithoutQuery = att.url.split('?')[0] ?? ''
+  const ext = urlWithoutQuery.split('.').pop()?.toLowerCase() ?? ''
+  return IMAGE_EXTENSIONS.has(ext)
 }

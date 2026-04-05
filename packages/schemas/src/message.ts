@@ -1,5 +1,12 @@
 import { z } from 'zod'
 
+export const AttachmentMetaSchema = z.object({
+  url: z.string().url(),
+  filename: z.string().max(255).nullable().optional(),
+  contentType: z.string().max(128).nullable().optional(),
+  sizeBytes: z.number().int().min(0).nullable().optional(),
+})
+
 export const SendMessageSchema = z.object({
   content: z
     .string()
@@ -7,7 +14,10 @@ export const SendMessageSchema = z.object({
     .max(4000, 'Message is too long')
     .optional(),
   replyToId: z.string().uuid().optional(),
+  // Legacy: plain URL array (kept for backward compat)
   attachmentUrls: z.array(z.string().url()).max(10).optional(),
+  // Rich attachment metadata
+  attachments: z.array(AttachmentMetaSchema).max(10).optional(),
 })
 
 export const EditMessageSchema = z.object({
