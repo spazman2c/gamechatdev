@@ -17,6 +17,7 @@ import { dmRoutes } from './routes/dms.js'
 import { voiceRoutes } from './routes/voice.js'
 import { roleRoutes } from './routes/roles.js'
 import { moderationRoutes } from './routes/moderation.js'
+import { automodRoutes } from './routes/automod.js'
 import { uploadRoutes } from './routes/uploads.js'
 import { socialRoutes } from './routes/social.js'
 import { notificationRoutes } from './routes/notifications.js'
@@ -104,6 +105,7 @@ async function bootstrap() {
   await server.register(voiceRoutes,      { prefix: '/api/voice' })
   await server.register(roleRoutes,       { prefix: '/api/hubs' })
   await server.register(moderationRoutes, { prefix: '/api/hubs' })
+  await server.register(automodRoutes,     { prefix: '/api/hubs' })
   await server.register(uploadRoutes,     { prefix: '/api/uploads' })
   await server.register(socialRoutes,          { prefix: '/api/social' })
   await server.register(notificationRoutes,    { prefix: '/api/notifications' })

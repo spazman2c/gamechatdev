@@ -86,3 +86,33 @@ export const channelSummaries = pgTable(
     channelIdx: index('summaries_channel_idx').on(table.channelId, table.createdAt),
   }),
 )
+
+export const hubAutomodSettings = pgTable('hub_automod_settings', {
+  hubId: uuid('hub_id').primaryKey().references(() => hubs.id, { onDelete: 'cascade' }),
+  enabled: boolean('enabled').notNull().default(false),
+  logChannelId: uuid('log_channel_id'), // soft ref to channels, no FK to avoid circular
+})
+
+export const hubAutomodRules = pgTable(
+  'hub_automod_rules',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    hubId: uuid('hub_id')
+      .notNull()
+      .references(() => hubs.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 64 }).notNull(),
+    type: varchar('type', { length: 32 }).notNull(),
+    // 'blocked_words' | 'spam' | 'mention_spam' | 'link_filter' | 'mass_caps' | 'duplicate' | 'new_account'
+    enabled: boolean('enabled').notNull().default(true),
+    action: varchar('action', { length: 16 }).notNull().default('delete'),
+    // 'delete' | 'delete_warn' | 'timeout' | 'kick' | 'ban'
+    timeoutMinutes: integer('timeout_minutes').notNull().default(10),
+    exemptRoleIds: text('exempt_role_ids').array().notNull().default(sql`ARRAY[]::text[]`),
+    exemptChannelIds: text('exempt_channel_ids').array().notNull().default(sql`ARRAY[]::text[]`),
+    config: jsonb('config').notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
+  },
+  (table) => ({
+    hubIdx: index('hub_automod_rules_hub_idx').on(table.hubId),
+  }),
+)

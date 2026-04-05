@@ -39,6 +39,8 @@ import {
   memberTimeouts,
   channelSummaries,
   wordFilters,
+  hubAutomodSettings,
+  hubAutomodRules,
 } from './schema/moderation.js'
 import { notifications, userNotificationSettings } from './schema/notifications.js'
 
@@ -207,6 +209,14 @@ export const channelSummariesRelations = relations(channelSummaries, ({ one }) =
 
 export const wordFiltersRelations = relations(wordFilters, ({ one }) => ({
   hub: one(hubs, { fields: [wordFilters.hubId], references: [hubs.id] }),
+}))
+
+export const hubAutomodSettingsRelations = relations(hubAutomodSettings, ({ one }) => ({
+  hub: one(hubs, { fields: [hubAutomodSettings.hubId], references: [hubs.id] }),
+}))
+
+export const hubAutomodRulesRelations = relations(hubAutomodRules, ({ one }) => ({
+  hub: one(hubs, { fields: [hubAutomodRules.hubId], references: [hubs.id] }),
 }))
 
 // ── Social ─────────────────────────────────────────────────────────────

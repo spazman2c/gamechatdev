@@ -6,6 +6,7 @@ import { Errors } from '../lib/errors.js'
 import { SendMessageSchema, EditMessageSchema } from '@nexora/schemas'
 import { getIO } from '../lib/socket.js'
 import { createNotification } from '../lib/notify.js'
+import { runAutomod, executeAutomodAction } from '../lib/automod.js'
 
 const PAGE_SIZE = 50
 
@@ -52,7 +53,6 @@ export async function messageRoutes(app: FastifyInstance) {
 
     const body = SendMessageSchema.parse(req.body)
 
-    // Word filter enforcement
     let content = body.content ?? ''
     if (content) {
       const channel = await db.query.channels.findFirst({
@@ -60,13 +60,40 @@ export async function messageRoutes(app: FastifyInstance) {
         columns: { hubId: true },
       })
       if (channel?.hubId) {
+        // Run AutoMod engine
+        const automodSettings = await db.query.hubAutomodSettings.findFirst({
+          where: eq(schema.hubAutomodSettings.hubId, channel.hubId),
+          columns: { logChannelId: true },
+        })
+        const automodResult = await runAutomod({
+          hubId: channel.hubId,
+          channelId,
+          userId: req.userId,
+          content,
+        })
+        if (automodResult) {
+          await executeAutomodAction({
+            hubId: channel.hubId,
+            channelId,
+            userId: req.userId,
+            result: automodResult,
+            logChannelId: automodSettings?.logChannelId ?? null,
+          })
+          return reply.code(400).send({
+            statusCode: 400,
+            code: 'AUTOMOD_BLOCKED',
+            message: automodResult.reason,
+          })
+        }
+
+        // Legacy word filter (censorship — replaces words with ***)
         const filters = await db.query.wordFilters.findMany({
           where: eq(schema.wordFilters.hubId, channel.hubId),
         })
         for (const filter of filters) {
           const regex = new RegExp(`\\b${filter.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi')
           if (filter.blockMessage && regex.test(content)) {
-            return reply.code(400).send({ error: 'Message contains prohibited content' })
+            return reply.code(400).send({ statusCode: 400, code: 'AUTOMOD_BLOCKED', message: 'Message contains prohibited content' })
           }
           content = content.replace(regex, '***')
         }

@@ -69,6 +69,29 @@ const MIGRATIONS = [
 
   // memberRoles — assignedAt timestamp
   `ALTER TABLE member_roles ADD COLUMN IF NOT EXISTS assigned_at timestamptz NOT NULL DEFAULT now()`,
+
+  // AutoMod settings
+  `CREATE TABLE IF NOT EXISTS hub_automod_settings (
+    hub_id uuid PRIMARY KEY REFERENCES hubs(id) ON DELETE CASCADE,
+    enabled boolean NOT NULL DEFAULT false,
+    log_channel_id uuid
+  )`,
+
+  // AutoMod rules
+  `CREATE TABLE IF NOT EXISTS hub_automod_rules (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    hub_id uuid NOT NULL REFERENCES hubs(id) ON DELETE CASCADE,
+    name varchar(64) NOT NULL,
+    type varchar(32) NOT NULL,
+    enabled boolean NOT NULL DEFAULT true,
+    action varchar(16) NOT NULL DEFAULT 'delete',
+    timeout_minutes integer NOT NULL DEFAULT 10,
+    exempt_role_ids text[] NOT NULL DEFAULT '{}',
+    exempt_channel_ids text[] NOT NULL DEFAULT '{}',
+    config jsonb NOT NULL DEFAULT '{}',
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS hub_automod_rules_hub_idx ON hub_automod_rules(hub_id)`,
 ]
 
 export async function runStartupMigrations() {
