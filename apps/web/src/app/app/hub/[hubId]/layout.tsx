@@ -1,22 +1,19 @@
 'use client'
 
-import { useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { HubSidebar, MembersPanel } from '@/components/hub/hub-sidebar'
 import { useHub } from '@/hooks/use-hub'
 import { useHubSocket } from '@/hooks/use-hub-socket'
 import { useHubUI } from '@/store/hub-ui'
+import { useAuthStore } from '@/store/auth'
 import { SkeletonChannelRow } from '@nexora/ui/skeleton'
 
 export default function HubLayout({ children }: { children: React.ReactNode }) {
   const { hubId } = useParams<{ hubId: string }>()
   const { isLoading, isError } = useHub(hubId)
-  const showMembers = useHubUI((s) => s.showMembers)
-  const closeMembers = useHubUI((s) => s.closeMembers)
+  const userId = useAuthStore((s) => s.user?.id ?? '')
+  const showMembers = useHubUI((s) => s.membersPanelByUser[userId] ?? false)
   useHubSocket(hubId)
-
-  // Close members panel when switching hubs
-  useEffect(() => { closeMembers() }, [hubId, closeMembers])
 
   return (
     <div className="flex flex-1 overflow-hidden">

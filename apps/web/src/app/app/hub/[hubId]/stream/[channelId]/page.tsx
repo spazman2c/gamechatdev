@@ -17,7 +17,8 @@ export default function StreamPage() {
   const { channelId } = useParams<{ channelId: string }>()
   const { hub, channels } = useHubStore()
   const { user } = useAuthStore()
-  const { showMembers, toggleMembers } = useHubUI()
+  const showMembers = useHubUI((s) => s.membersPanelByUser[user?.id ?? ''] ?? false)
+  const toggleMembersAction = useHubUI((s) => s.toggleMembers)
   const [replyTo, setReplyTo] = useState<Message | null>(null)
 
   const channel = channels.find((c) => c.id === channelId)
@@ -59,7 +60,7 @@ export default function StreamPage() {
           <ToolbarBtn
             label={showMembers ? 'Hide Members' : 'Show Members'}
             active={showMembers}
-            onClick={toggleMembers}
+            onClick={() => toggleMembersAction(user?.id ?? '')}
           >
             <Users className="h-4 w-4" />
           </ToolbarBtn>

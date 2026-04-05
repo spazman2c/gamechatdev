@@ -45,12 +45,28 @@ export function useHubSocket(hubId: string | null) {
       },
     )
 
+    // Live-patch the members list when any member's presence changes.
+    // This avoids a full refetch and keeps the online/offline sections instant.
+    const offPresence = on<{ userId: string; status: string }>(
+      'presence:changed',
+      ({ userId, status }) => {
+        type MemberUser = { id: string; username: string; displayName: string | null; avatarUrl: string | null; presence: string }
+        type HubMember = { userId: string; nickname: string | null; user: MemberUser }
+        queryClient.setQueryData<HubMember[]>(['hub-members', hubId], (old) =>
+          old?.map((m) =>
+            m.userId === userId ? { ...m, user: { ...m.user, presence: status } } : m,
+          ),
+        )
+      },
+    )
+
     return () => {
       emit('hub:leave', { hubId })
       offSnapshot()
       offJoined()
       offLeft()
       offRolesUpdated()
+      offPresence()
     }
   // emit and on are stable useCallback refs; include hubId as the only real dep
   // eslint-disable-next-line react-hooks/exhaustive-deps
