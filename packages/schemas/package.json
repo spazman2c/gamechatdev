@@ -12,6 +12,7 @@
     }
   },
   "scripts": {
+    "postinstall": "tsc",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "dev": "tsc --watch"

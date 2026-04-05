@@ -14,7 +14,7 @@ export interface ContextMenuAnchor {
 interface ContextMenuState {
   target: ContextMenuTarget | null
   anchor: ContextMenuAnchor | null
-  channelId: string | null
+  channelId: string | null | undefined
   open: (target: ContextMenuTarget, anchor: ContextMenuAnchor, channelId?: string) => void
   close: () => void
 }
@@ -23,7 +23,7 @@ export const useContextMenu = create<ContextMenuState>((set) => ({
   target: null,
   anchor: null,
   channelId: null,
-  open: (target, anchor, channelId = null) => set({ target, anchor, channelId }),
+  open: (target, anchor, channelId) => set({ target, anchor, channelId }),
   close: () => set({ target: null, anchor: null, channelId: null }),
 }))
 
