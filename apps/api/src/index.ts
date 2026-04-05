@@ -39,8 +39,12 @@ async function bootstrap() {
   await connectRedis()
 
   // ── Plugins ──
+  const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  const corsOrigin = allowedOrigins.includes('*') ? true : allowedOrigins
+  console.warn('[CORS] Allowed origins:', JSON.stringify(allowedOrigins))
+
   await server.register(cors, {
-    origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()),
+    origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
