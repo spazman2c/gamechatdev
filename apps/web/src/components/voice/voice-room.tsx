@@ -186,10 +186,19 @@ function ParticipantCard({
   const { isSpeaking, isMuted, hasVideo, stream, displayName, username, avatarUrl } = participant
   const displayLabel = displayName ?? username
   const videoRef = useRef<HTMLVideoElement>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
     if (videoRef.current && stream && hasVideo) {
       videoRef.current.srcObject = stream
+    }
+  }, [stream, hasVideo])
+
+  // Audio-only: attach stream to a hidden <audio> element so the remote voice plays.
+  // When hasVideo becomes true the <video> element (non-muted for remote) takes over.
+  useEffect(() => {
+    if (audioRef.current && stream && !hasVideo) {
+      audioRef.current.srcObject = stream
     }
   }, [stream, hasVideo])
 
@@ -205,6 +214,11 @@ function ParticipantCard({
       )}
       aria-label={`${displayLabel}${isSelf ? ' (you)' : ''}${isSpeaking ? ', speaking' : ''}${isMuted ? ', muted' : ''}`}
     >
+      {/* Hidden audio element for audio-only remote participants */}
+      {!isSelf && !hasVideo && (
+        <audio ref={audioRef} autoPlay />
+      )}
+
       {/* Video */}
       {hasVideo && stream && (
         <video

@@ -429,9 +429,14 @@ export function useWebRTC({ channelId }: UseWebRTCOptions): UseWebRTCReturn {
         setLocalStream(new MediaStream(stream.getTracks()))
         setIsCameraOn(true)
 
-        // Add to all peer connections
-        for (const pc of peerConnections.current.values()) {
+        // Add to all peer connections and renegotiate so remote peers receive the video track
+        for (const [peerId, pc] of peerConnections.current.entries()) {
           pc.addTrack(videoTrack, stream)
+          try {
+            const offer = await pc.createOffer()
+            await pc.setLocalDescription(offer)
+            getSocket()?.emit('webrtc:offer', { to: peerId, offer })
+          } catch { /* peer disconnected */ }
         }
       } catch {
         // User denied camera
@@ -466,13 +471,18 @@ export function useWebRTC({ channelId }: UseWebRTCOptions): UseWebRTCReturn {
 
         const screenTrack = screen.getVideoTracks()[0]!
 
-        // Replace video track in all peer connections
-        for (const pc of peerConnections.current.values()) {
+        // Replace video track in all peer connections; renegotiate if no sender existed yet
+        for (const [peerId, pc] of peerConnections.current.entries()) {
           const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
           if (sender) {
             await sender.replaceTrack(screenTrack)
           } else {
             pc.addTrack(screenTrack, screen)
+            try {
+              const offer = await pc.createOffer()
+              await pc.setLocalDescription(offer)
+              getSocket()?.emit('webrtc:offer', { to: peerId, offer })
+            } catch { /* peer disconnected */ }
           }
         }
 
