@@ -1,7 +1,8 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "buildCommand": "npm ci && npm run build --workspace=@nexora/schemas && npm run build --workspace=@nexora/types && npm run build --workspace=@nexora/api"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
     "startCommand": "npm run start --workspace=@nexora/api",
