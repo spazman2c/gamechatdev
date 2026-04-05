@@ -1,8 +1,9 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useWebRTC } from '@/hooks/use-webrtc'
-import type { UseWebRTCReturn } from '@/hooks/use-webrtc'
+import type { UseWebRTCReturn, RoomParticipant } from '@/hooks/use-webrtc'
+import { useAuthStore } from '@/store/auth'
 
 interface VoiceSession {
   activeChannelId: string | null
@@ -12,6 +13,36 @@ interface VoiceSession {
 }
 
 const VoiceSessionContext = createContext<VoiceSession | null>(null)
+
+/**
+ * Renders a hidden <audio> element for every remote participant that has a
+ * stream. These are mounted at the provider level so audio keeps playing
+ * regardless of which page the user navigates to.
+ */
+function PersistentAudioOutputs({ participants }: { participants: RoomParticipant[] }) {
+  const userId = useAuthStore((s) => s.user?.id)
+
+  // Only remote participants with a stream
+  const remotes = participants.filter((p) => p.userId !== userId && p.stream)
+
+  return (
+    <>
+      {remotes.map((p) => (
+        <HiddenAudio key={p.userId} stream={p.stream!} />
+      ))}
+    </>
+  )
+}
+
+function HiddenAudio({ stream }: { stream: MediaStream }) {
+  const ref = useRef<HTMLAudioElement>(null)
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.srcObject = stream
+    }
+  }, [stream])
+  return <audio ref={ref} autoPlay style={{ display: 'none' }} />
+}
 
 export function VoiceSessionProvider({ children }: { children: React.ReactNode }) {
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null)
@@ -35,6 +66,8 @@ export function VoiceSessionProvider({ children }: { children: React.ReactNode }
 
   return (
     <VoiceSessionContext.Provider value={value}>
+      {/* Always-mounted audio elements ensure voice is heard on any page */}
+      <PersistentAudioOutputs participants={session.participants} />
       {children}
     </VoiceSessionContext.Provider>
   )

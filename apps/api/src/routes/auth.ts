@@ -15,6 +15,7 @@ import {
   LoginSchema,
   ForgotPasswordSchema,
   ResetPasswordSchema,
+  ChangePasswordSchema,
 } from '@nexora/schemas'
 import { sendPasswordResetEmail } from '../services/email.js'
 
@@ -255,5 +256,26 @@ export async function authRoutes(app: FastifyInstance) {
     ])
 
     return reply.send({ message: 'Password reset successfully. Please log in.' })
+  })
+
+  // POST /api/auth/change-password
+  app.post('/change-password', { preHandler: requireAuth }, async (req, reply) => {
+    const body = ChangePasswordSchema.parse(req.body)
+
+    const user = await db.query.users.findFirst({
+      where: eq(schema.users.id, req.userId),
+    })
+    if (!user) { throw Errors.USER_NOT_FOUND() }
+
+    const passwordMatch = await compare(body.currentPassword, user.passwordHash)
+    if (!passwordMatch) { throw Errors.INVALID_CREDENTIALS() }
+
+    const newHash = await hash(body.newPassword, 12)
+    await db
+      .update(schema.users)
+      .set({ passwordHash: newHash, updatedAt: new Date() })
+      .where(eq(schema.users.id, req.userId))
+
+    return reply.send({ message: 'Password changed successfully.' })
   })
 }

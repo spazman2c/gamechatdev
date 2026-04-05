@@ -1,9 +1,11 @@
 import type { FastifyInstance } from 'fastify'
 import { and, eq, inArray } from 'drizzle-orm'
+import bcrypt from 'bcryptjs'
+const { compare } = bcrypt
 import { db, schema } from '../db/index.js'
 import { requireAuth } from '../middleware/auth.js'
 import { Errors } from '../lib/errors.js'
-import { UpdateProfileSchema } from '@nexora/schemas'
+import { UpdateProfileSchema, UpdateUsernameSchema, UpdateEmailSchema } from '@nexora/schemas'
 
 export async function userRoutes(app: FastifyInstance) {
   // GET /api/users/me
@@ -35,6 +37,54 @@ export async function userRoutes(app: FastifyInstance) {
         presence: schema.users.presence,
         updatedAt: schema.users.updatedAt,
       })
+
+    if (!updated) { throw Errors.USER_NOT_FOUND() }
+    return updated
+  })
+
+  // PATCH /api/users/me/username
+  app.patch('/me/username', { preHandler: requireAuth }, async (req) => {
+    const body = UpdateUsernameSchema.parse(req.body)
+
+    const existing = await db.query.users.findFirst({
+      where: eq(schema.users.username, body.username),
+    })
+    if (existing && existing.id !== req.userId) { throw Errors.USERNAME_TAKEN() }
+
+    const [updated] = await db
+      .update(schema.users)
+      .set({ username: body.username, updatedAt: new Date() })
+      .where(eq(schema.users.id, req.userId))
+      .returning({ id: schema.users.id, username: schema.users.username })
+
+    if (!updated) { throw Errors.USER_NOT_FOUND() }
+    return updated
+  })
+
+  // PATCH /api/users/me/email
+  app.patch('/me/email', { preHandler: requireAuth }, async (req) => {
+    const body = UpdateEmailSchema.parse(req.body)
+
+    // Verify password
+    const user = await db.query.users.findFirst({
+      where: eq(schema.users.id, req.userId),
+    })
+    if (!user) { throw Errors.USER_NOT_FOUND() }
+
+    const passwordMatch = await compare(body.password, user.passwordHash)
+    if (!passwordMatch) { throw Errors.INVALID_CREDENTIALS() }
+
+    // Check email uniqueness
+    const existing = await db.query.users.findFirst({
+      where: eq(schema.users.email, body.email),
+    })
+    if (existing && existing.id !== req.userId) { throw Errors.EMAIL_TAKEN() }
+
+    const [updated] = await db
+      .update(schema.users)
+      .set({ email: body.email, updatedAt: new Date() })
+      .where(eq(schema.users.id, req.userId))
+      .returning({ id: schema.users.id, email: schema.users.email })
 
     if (!updated) { throw Errors.USER_NOT_FOUND() }
     return updated
