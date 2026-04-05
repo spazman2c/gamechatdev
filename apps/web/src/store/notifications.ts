@@ -54,11 +54,11 @@ export const useNotifStore = create<NotifStore>((set) => ({
 // Convenience helpers
 export const notify = {
   success: (title: string, message?: string) =>
-    useNotifStore.getState().push({ type: 'success', title, message }),
+    useNotifStore.getState().push({ type: 'success', title, ...(message !== undefined && { message }) }),
   error: (title: string, message?: string) =>
-    useNotifStore.getState().push({ type: 'error', title, message, duration: 6000 }),
+    useNotifStore.getState().push({ type: 'error', title, duration: 6000, ...(message !== undefined && { message }) }),
   warning: (title: string, message?: string) =>
-    useNotifStore.getState().push({ type: 'warning', title, message }),
+    useNotifStore.getState().push({ type: 'warning', title, ...(message !== undefined && { message }) }),
   info: (title: string, message?: string) =>
-    useNotifStore.getState().push({ type: 'info', title, message }),
+    useNotifStore.getState().push({ type: 'info', title, ...(message !== undefined && { message }) }),
 }

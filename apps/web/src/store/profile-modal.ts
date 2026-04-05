@@ -7,7 +7,7 @@ export interface ProfileAnchor {
 
 interface ProfileModalState {
   userId: string | null
-  anchor: ProfileAnchor | null
+  anchor: ProfileAnchor | null | undefined
   openProfile: (userId: string, anchor?: ProfileAnchor) => void
   closeProfile: () => void
 }
@@ -15,7 +15,7 @@ interface ProfileModalState {
 export const useProfileModal = create<ProfileModalState>((set) => ({
   userId: null,
   anchor: null,
-  openProfile: (userId, anchor = null) => set({ userId, anchor }),
+  openProfile: (userId, anchor) => set({ userId, anchor }),
   closeProfile: () => set({ userId: null, anchor: null }),
 }))
 

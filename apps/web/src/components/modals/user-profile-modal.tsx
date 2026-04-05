@@ -16,7 +16,7 @@ const CARD_W = 340
 const CARD_H = 480 // generous estimate; card is self-sizing but this prevents edge clipping
 const GAP    = 12  // gap between cursor and card edge
 
-function computeStyle(anchor: ProfileAnchor | null): React.CSSProperties {
+function computeStyle(anchor: ProfileAnchor | null | undefined): React.CSSProperties {
   if (!anchor) {
     // fallback: centered
     return { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }

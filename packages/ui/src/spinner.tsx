@@ -28,7 +28,7 @@ const spinnerVariants = cva(
 )
 
 export interface SpinnerProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
+  extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'color'>,
     VariantProps<typeof spinnerVariants> {
   label?: string
 }
