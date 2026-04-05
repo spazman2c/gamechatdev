@@ -42,11 +42,11 @@ const presenceDotVariants = cva(
 export interface AvatarProps
   extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>,
     VariantProps<typeof avatarVariants> {
-  src?: string
-  alt?: string
-  fallback?: string
-  presenceColor?: string
-  showPresence?: boolean
+  src?: string | undefined
+  alt?: string | undefined
+  fallback?: string | undefined
+  presenceColor?: string | undefined
+  showPresence?: boolean | undefined
 }
 
 function Avatar({

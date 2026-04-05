@@ -4,26 +4,26 @@ import {
   refreshTokens,
   emailVerifications,
   passwordResets,
-} from './schema/users'
+} from './schema/users.js'
 import {
   userNotes,
   friendships,
   userIgnores,
   userBlocks,
-} from './schema/social'
+} from './schema/social.js'
 import {
   hubs,
   hubMembers,
   zones,
   invites,
   hubBans,
-} from './schema/hubs'
+} from './schema/hubs.js'
 import {
   channels,
   roles,
   memberRoles,
   channelPermissionOverrides,
-} from './schema/channels'
+} from './schema/channels.js'
 import {
   messages,
   messageAttachments,
@@ -31,13 +31,13 @@ import {
   dmConversations,
   dmParticipants,
   dmMessages,
-} from './schema/messages'
+} from './schema/messages.js'
 import {
   modActions,
   memberTimeouts,
   channelSummaries,
   wordFilters,
-} from './schema/moderation'
+} from './schema/moderation.js'
 
 // ── Users ──────────────────────────────────────────────────────────────
 export const usersRelations = relations(users, ({ many }) => ({

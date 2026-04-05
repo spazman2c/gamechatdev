@@ -11,8 +11,8 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
-import { users } from './users'
-import { hubs } from './hubs'
+import { users } from './users.js'
+import { hubs } from './hubs.js'
 
 export const modActions = pgTable(
   'mod_actions',

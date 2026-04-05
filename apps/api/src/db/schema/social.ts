@@ -1,6 +1,6 @@
 import { pgTable, uuid, varchar, text, timestamp, index, primaryKey } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
-import { users } from './users'
+import { users } from './users.js'
 
 export const userNotes = pgTable(
   'user_notes',

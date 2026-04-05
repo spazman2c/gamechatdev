@@ -12,6 +12,7 @@ import { Input } from '@nexora/ui/input'
 import { Avatar } from '@nexora/ui/avatar'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
+import type { PublicUser } from '@nexora/types'
 import { useAuthStore } from '@/store/auth'
 import { notify } from '@/store/notifications'
 import { useTheme } from 'next-themes'
@@ -95,7 +96,7 @@ function ProfileSettings() {
   const mutation = useMutation({
     mutationFn: (data: UpdateProfileInput) => api.patch('/users/me', data),
     onSuccess: (res) => {
-      updateUser(res.data as Partial<typeof user>)
+      updateUser(res.data as Partial<PublicUser>)
       notify.success('Profile updated!')
     },
     onError: () => notify.error('Failed to save profile'),

@@ -163,7 +163,7 @@ export function MessageInput({
 
     sendMutation.mutate({
       content: trimmed,
-      replyToId: replyTo?.id,
+      ...(replyTo?.id !== undefined && { replyToId: replyTo.id }),
       attachmentUrls,
     })
 

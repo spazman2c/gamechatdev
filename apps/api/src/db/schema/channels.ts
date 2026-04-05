@@ -12,8 +12,8 @@ import {
   bigint,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
-import { users } from './users'
-import { hubs, zones } from './hubs'
+import { users } from './users.js'
+import { hubs, zones } from './hubs.js'
 
 export const channelTypeEnum = pgEnum('channel_type', [
   'text',

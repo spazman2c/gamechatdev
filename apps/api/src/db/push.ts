@@ -23,7 +23,7 @@ async function main() {
     {
       dialect: 'postgresql',
       url: dbUrl,
-    } as Parameters<typeof pushSchema>[1],
+    } as unknown as Parameters<typeof pushSchema>[1],
   )
 
   if (warnings.length) {

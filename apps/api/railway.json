@@ -1,0 +1,9 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "buildCommand": "npm run build --workspace=@nexora/schemas && npm run build --workspace=@nexora/api"
+  },
+  "deploy": {
+    "startCommand": "npm run start --workspace=@nexora/api"
+  }
+}
