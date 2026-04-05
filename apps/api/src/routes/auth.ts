@@ -20,10 +20,15 @@ import {
 import { sendPasswordResetEmail } from '../services/email.js'
 
 const REFRESH_COOKIE = 'nx_refresh'
+// SameSite=None is required in production so that the httpOnly cookie is sent
+// on cross-origin fetch requests (frontend and API are on separate subdomains).
+// SameSite=None requires Secure=true; in local dev we keep Lax so the cookie
+// still works over plain HTTP (ports share the same host so Lax is fine).
+const IS_PROD = env.NODE_ENV === 'production'
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  secure: IS_PROD,
+  sameSite: (IS_PROD ? 'none' : 'lax') as 'none' | 'lax',
   path: '/',
   maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
 }
@@ -207,7 +212,7 @@ export async function authRoutes(app: FastifyInstance) {
         eq(schema.refreshTokens.tokenHash, tokenHash),
       )
     }
-    reply.clearCookie(REFRESH_COOKIE, { path: '/' })
+    reply.clearCookie(REFRESH_COOKIE, { path: '/', sameSite: IS_PROD ? 'none' : 'lax', secure: IS_PROD })
     return reply.send({ message: 'Logged out.' })
   })
 
