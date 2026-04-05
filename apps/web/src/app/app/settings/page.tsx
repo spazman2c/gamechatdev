@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   User,
   Bell,
@@ -38,6 +38,10 @@ import type { PublicUser } from '@nexora/types'
 import { useAuthStore } from '@/store/auth'
 import { notify } from '@/store/notifications'
 import { useTheme } from 'next-themes'
+
+declare global {
+  interface Window { __nexoraSoundsEnabled?: boolean }
+}
 
 // ── Sidebar structure ────────────────────────────────────────────────────
 const SECTIONS = [
@@ -687,12 +691,73 @@ function VoiceVideoSettings() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function NotificationSettings() {
-  const [enableDesktop, setEnableDesktop] = useState(true)
-  const [enableDMs, setEnableDMs] = useState(true)
-  const [enableMentions, setEnableMentions] = useState(true)
-  const [enableHubActivity, setEnableHubActivity] = useState(true)
-  const [enableSounds, setEnableSounds] = useState(true)
-  const [enableBadge, setEnableBadge] = useState(true)
+  const queryClient = useQueryClient()
+  const [desktopPermission, setDesktopPermission] = useState<NotificationPermission | 'unsupported'>('default')
+
+  // Load notification permission state
+  useEffect(() => {
+    if (typeof Notification === 'undefined') {
+      setDesktopPermission('unsupported')
+    } else {
+      setDesktopPermission(Notification.permission)
+    }
+  }, [])
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ['notification-settings'],
+    queryFn: async () => {
+      const res = await api.get<{
+        notifDms: boolean
+        notifMentions: boolean
+        notifHubActivity: boolean
+        notifSounds: boolean
+        notifDesktop: boolean
+      }>('/notifications/settings')
+      return res.data
+    },
+  })
+
+  type NotifSettings = { notifDms: boolean; notifMentions: boolean; notifHubActivity: boolean; notifSounds: boolean; notifDesktop: boolean }
+
+  const saveMutation = useMutation({
+    mutationFn: (patch: Partial<NotifSettings>) => api.patch('/notifications/settings', patch),
+    onSuccess: (_, patch) => {
+      queryClient.setQueryData(['notification-settings'], (old: NotifSettings | undefined) => ({ ...old, ...patch }))
+      if (patch.notifSounds !== undefined) {
+        window.__nexoraSoundsEnabled = patch.notifSounds
+      }
+    },
+    onError: () => notify.error('Failed to save notification settings'),
+  })
+
+  const toggle = (key: keyof NotifSettings) => {
+    if (!settings) { return }
+    saveMutation.mutate({ [key]: !settings[key] })
+  }
+
+  const requestDesktopPermission = async () => {
+    if (typeof Notification === 'undefined') { return }
+    const result = await Notification.requestPermission()
+    setDesktopPermission(result)
+    if (result === 'granted') {
+      saveMutation.mutate({ notifDesktop: true })
+    }
+  }
+
+  const testSound = () => {
+    import('@/lib/notification-sound').then(({ playNotificationSound }) => playNotificationSound())
+  }
+
+  if (isLoading || !settings) {
+    return (
+      <div>
+        <h2 className="font-brand text-xl font-bold text-[var(--text-primary)] mb-6">Notifications</h2>
+        <div className="animate-pulse flex flex-col gap-4">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-12 rounded bg-[var(--surface-panel)]" />)}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -701,43 +766,61 @@ function NotificationSettings() {
       <SettingsSection title="Desktop Notifications">
         <ToggleSetting
           label="Enable desktop notifications"
-          description="Show push notifications on your desktop"
-          checked={enableDesktop}
-          onChange={setEnableDesktop}
+          description="Show browser push notifications when the tab is in the background"
+          checked={settings.notifDesktop && desktopPermission === 'granted'}
+          onChange={() => {
+            if (desktopPermission !== 'granted') {
+              requestDesktopPermission()
+            } else {
+              toggle('notifDesktop')
+            }
+          }}
         />
-        <ToggleSetting
-          label="Unread badge"
-          description="Show a badge on the app icon for unread messages"
-          checked={enableBadge}
-          onChange={setEnableBadge}
-        />
+        {desktopPermission === 'denied' && (
+          <p className="text-xs text-[var(--functional-error)] px-1">
+            Browser notifications are blocked. Allow them in your browser settings.
+          </p>
+        )}
       </SettingsSection>
 
       <SettingsSection title="Notification Types">
         <ToggleSetting
           label="Direct messages"
           description="Notify me when I receive a direct message"
-          checked={enableDMs}
-          onChange={setEnableDMs}
+          checked={settings.notifDms}
+          onChange={() => toggle('notifDms')}
         />
         <ToggleSetting
           label="Mentions"
-          description="Notify me when someone @mentions me"
-          checked={enableMentions}
-          onChange={setEnableMentions}
+          description="Notify me when someone @mentions me in a channel"
+          checked={settings.notifMentions}
+          onChange={() => toggle('notifMentions')}
         />
         <ToggleSetting
           label="Hub activity"
-          description="Notify me about activity in my hubs"
-          checked={enableHubActivity}
-          onChange={setEnableHubActivity}
+          description="Notify me about invites and announcements in my hubs"
+          checked={settings.notifHubActivity}
+          onChange={() => toggle('notifHubActivity')}
         />
+      </SettingsSection>
+
+      <SettingsSection title="Sounds">
         <ToggleSetting
-          label="Sound effects"
-          description="Play sounds for notifications and room events"
-          checked={enableSounds}
-          onChange={setEnableSounds}
+          label="Notification sounds"
+          description="Play a chime when a new notification arrives"
+          checked={settings.notifSounds}
+          onChange={() => toggle('notifSounds')}
         />
+        {settings.notifSounds && (
+          <div className="pt-1">
+            <button
+              onClick={testSound}
+              className="px-3 py-1.5 rounded-[var(--radius-sm)] text-sm bg-[var(--surface-panel)] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] transition-colors border border-[var(--border-default)]"
+            >
+              Test sound
+            </button>
+          </div>
+        )}
       </SettingsSection>
     </div>
   )

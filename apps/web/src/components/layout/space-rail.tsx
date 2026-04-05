@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/auth'
 import { useHubStore } from '@/store/hub'
 import { useJoinedHubs } from '@/hooks/use-hub'
 import { CreateHubModal } from '@/components/modals/create-hub-modal'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import { PRESENCE_COLORS } from '@nexora/types'
 import type { PresenceStatus } from '@nexora/types'
 
@@ -64,6 +65,9 @@ export function SpaceRail() {
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Notification Bell */}
+      <NotificationBell />
 
       {/* Settings */}
       <RailIcon href="/app/settings" label="Settings" active={pathname.startsWith('/app/settings')}>

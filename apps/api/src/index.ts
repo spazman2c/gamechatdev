@@ -19,6 +19,7 @@ import { roleRoutes } from './routes/roles.js'
 import { moderationRoutes } from './routes/moderation.js'
 import { uploadRoutes } from './routes/uploads.js'
 import { socialRoutes } from './routes/social.js'
+import { notificationRoutes } from './routes/notifications.js'
 import { runStartupMigrations } from './db/migrate-startup.js'
 import { createServer } from 'http'
 
@@ -104,7 +105,8 @@ async function bootstrap() {
   await server.register(roleRoutes,       { prefix: '/api/hubs' })
   await server.register(moderationRoutes, { prefix: '/api/hubs' })
   await server.register(uploadRoutes,     { prefix: '/api/uploads' })
-  await server.register(socialRoutes,     { prefix: '/api/social' })
+  await server.register(socialRoutes,          { prefix: '/api/social' })
+  await server.register(notificationRoutes,    { prefix: '/api/notifications' })
 
   // ── 404 handler ──
   server.setNotFoundHandler((_req, reply) => {

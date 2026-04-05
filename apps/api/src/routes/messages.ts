@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { Errors } from '../lib/errors.js'
 import { SendMessageSchema, EditMessageSchema } from '@nexora/schemas'
 import { getIO } from '../lib/socket.js'
+import { createNotification } from '../lib/notify.js'
 
 const PAGE_SIZE = 50
 
@@ -108,6 +109,39 @@ export async function messageRoutes(app: FastifyInstance) {
     })
 
     getIO()?.to(`channel:${channelId}`).emit('message:new', fullMessage)
+
+    // Detect @username mentions and notify each mentioned user
+    if (content) {
+      const mentionMatches = content.match(/@([a-zA-Z0-9_]{2,32})/g)
+      if (mentionMatches) {
+        const usernames = [...new Set(mentionMatches.map((m) => m.slice(1).toLowerCase()))]
+        const mentionedUsers = await db.query.users.findMany({
+          where: (u, { inArray, sql: s }) =>
+            inArray(s`lower(${u.username})`, usernames),
+          columns: { id: true, username: true },
+        })
+
+        const channel = await db.query.channels.findFirst({
+          where: eq(schema.channels.id, channelId),
+          columns: { hubId: true },
+          with: { hub: { columns: { name: true } } },
+        })
+
+        const authorName = fullMessage?.author?.displayName ?? fullMessage?.author?.username ?? 'Someone'
+
+        for (const mentioned of mentionedUsers) {
+          if (mentioned.id === req.userId) { continue } // don't notify self
+          await createNotification({
+            userId: mentioned.id,
+            type: 'mention',
+            title: `${authorName} mentioned you`,
+            body: content.slice(0, 100),
+            referenceUrl: channel?.hubId ? `/app/hub/${channel.hubId}` : undefined,
+            referenceId: message.id,
+          })
+        }
+      }
+    }
 
     return reply.code(201).send(fullMessage)
   })

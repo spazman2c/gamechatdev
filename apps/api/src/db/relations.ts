@@ -40,9 +40,10 @@ import {
   channelSummaries,
   wordFilters,
 } from './schema/moderation.js'
+import { notifications, userNotificationSettings } from './schema/notifications.js'
 
 // ── Users ──────────────────────────────────────────────────────────────
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   refreshTokens: many(refreshTokens),
   hubMembers: many(hubMembers),
   messages: many(messages),
@@ -58,6 +59,20 @@ export const usersRelations = relations(users, ({ many }) => ({
   ignoredBy: many(userIgnores, { relationName: 'ignoredBy' }),
   blocking: many(userBlocks, { relationName: 'blocking' }),
   blockedBy: many(userBlocks, { relationName: 'blockedBy' }),
+  notifications: many(notifications),
+  notificationSettings: one(userNotificationSettings, {
+    fields: [users.id],
+    references: [userNotificationSettings.userId],
+  }),
+}))
+
+// ── Notifications ──────────────────────────────────────────────────────
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.userId], references: [users.id] }),
+}))
+
+export const userNotificationSettingsRelations = relations(userNotificationSettings, ({ one }) => ({
+  user: one(users, { fields: [userNotificationSettings.userId], references: [users.id] }),
 }))
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({

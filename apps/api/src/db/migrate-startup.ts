@@ -36,6 +36,31 @@ const MIGRATIONS = [
     created_at timestamptz NOT NULL DEFAULT now()
   )`,
   `CREATE INDEX IF NOT EXISTS hub_stickers_hub_idx ON hub_stickers(hub_id)`,
+
+  // notifications table
+  `CREATE TABLE IF NOT EXISTS notifications (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type varchar(32) NOT NULL,
+    title varchar(255) NOT NULL,
+    body text,
+    reference_url text,
+    reference_id varchar(64),
+    read boolean NOT NULL DEFAULT false,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications(user_id)`,
+  `CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications(user_id, created_at DESC)`,
+
+  // user_notification_settings table
+  `CREATE TABLE IF NOT EXISTS user_notification_settings (
+    user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    notif_dms boolean NOT NULL DEFAULT true,
+    notif_mentions boolean NOT NULL DEFAULT true,
+    notif_hub_activity boolean NOT NULL DEFAULT false,
+    notif_sounds boolean NOT NULL DEFAULT true,
+    notif_desktop boolean NOT NULL DEFAULT false
+  )`,
 ]
 
 export async function runStartupMigrations() {

@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { Errors } from '../lib/errors.js'
 import { SendMessageSchema } from '@nexora/schemas'
 import { getIO } from '../lib/socket.js'
+import { createNotification } from '../lib/notify.js'
 
 const PAGE_SIZE = 50
 
@@ -140,6 +141,25 @@ export async function dmRoutes(app: FastifyInstance) {
     const io = getIO()
     if (io) {
       io.to(`dm:${conversationId}`).emit('dm:message:new', fullMessage)
+    }
+
+    // Notify other participants
+    const allParticipants = await db.query.dmParticipants.findMany({
+      where: eq(schema.dmParticipants.conversationId, conversationId),
+    })
+    const senderName = author?.displayName ?? author?.username ?? 'Someone'
+    const preview = body.content ? body.content.slice(0, 80) : 'Sent a message'
+
+    for (const p of allParticipants) {
+      if (p.userId === req.userId) { continue }
+      await createNotification({
+        userId: p.userId,
+        type: 'dm_message',
+        title: `${senderName}`,
+        body: preview,
+        referenceUrl: `/app/dms/${conversationId}`,
+        referenceId: conversationId,
+      })
     }
 
     return reply.code(201).send(fullMessage)
