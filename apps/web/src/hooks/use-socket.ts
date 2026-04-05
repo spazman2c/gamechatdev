@@ -63,3 +63,11 @@ export function emitTypingStart(channelId: string) {
 export function emitTypingStop(channelId: string) {
   globalSocket?.emit('typing:stop', { channelId })
 }
+
+export function joinDM(conversationId: string) {
+  globalSocket?.emit('dm:join', { conversationId })
+}
+
+export function leaveDM(conversationId: string) {
+  globalSocket?.emit('dm:leave', { conversationId })
+}

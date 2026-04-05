@@ -1,16 +1,19 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, MessageSquare, MoreHorizontal } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Avatar } from '@nexora/ui/avatar'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { useProfileModal, type ProfileAnchor } from '@/store/profile-modal'
+import { useDmStore } from '@/store/dm'
 import { notify } from '@/store/notifications'
 import { PRESENCE_LABELS, PRESENCE_COLORS } from '@nexora/types'
 import { cn } from '@/lib/utils'
-import type { UserProfile } from '@nexora/types'
+import type { UserProfile, DmConversation } from '@nexora/types'
 
 const CARD_W = 340
 const CARD_H = 480 // generous estimate; card is self-sizing but this prevents edge clipping
@@ -93,6 +96,8 @@ function ProfileCard({
   onClose: () => void
   style?: React.CSSProperties
 }) {
+  const router = useRouter()
+  const { upsertConversation } = useDmStore()
   const { data, isLoading } = useQuery({
     queryKey: ['user-profile', userId],
     queryFn: async () => {
@@ -100,6 +105,17 @@ function ProfileCard({
       return res.data
     },
     staleTime: 30_000,
+  })
+
+  const openDmMutation = useMutation({
+    mutationFn: () => api.post<DmConversation>('/dms', { userId }),
+    onSuccess: (res) => {
+      const conv = res.data
+      upsertConversation(conv)
+      onClose()
+      router.push(`/app/dms/${conv.id}`)
+    },
+    onError: () => notify.error('Failed to open conversation'),
   })
 
   const presenceKey = data?.presence ?? 'offline'
@@ -123,12 +139,16 @@ function ProfileCard({
         <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
           {!isOwnProfile && (
             <button
-              onClick={() => notify.info('Coming soon', 'Direct messages are on the way!')}
-              className="h-8 w-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white hover:bg-black/50 transition-colors"
+              onClick={() => openDmMutation.mutate()}
+              disabled={openDmMutation.isPending}
+              className="h-8 w-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white hover:bg-black/50 transition-colors disabled:opacity-50"
               title="Send message"
               aria-label="Send message"
             >
-              <MessageSquare className="h-4 w-4" />
+              {openDmMutation.isPending
+                ? <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : <MessageSquare className="h-4 w-4" />
+              }
             </button>
           )}
           <button
@@ -194,8 +214,9 @@ function ProfileCard({
       {!isLoading && data && !isOwnProfile && (
         <div className="px-4 pb-4">
           <button
-            onClick={() => notify.info('Coming soon', 'Direct messages are on the way!')}
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-md)] bg-[var(--surface-panel)] hover:bg-[var(--surface-hover)] transition-colors text-left border border-transparent focus:outline-none focus:border-[var(--accent-primary)]"
+            onClick={() => openDmMutation.mutate()}
+            disabled={openDmMutation.isPending}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-md)] bg-[var(--surface-panel)] hover:bg-[var(--surface-hover)] transition-colors text-left border border-transparent focus:outline-none focus:border-[var(--accent-primary)] disabled:opacity-50"
             aria-label={`Message ${data.username}`}
           >
             <span className="flex-1 text-sm text-[var(--text-muted)]">

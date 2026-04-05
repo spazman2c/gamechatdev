@@ -1,5 +1,24 @@
 import type { PublicUser } from './user'
 
+export interface DmMessage {
+  id: string
+  conversationId: string
+  author: PublicUser | null
+  content: string | null
+  replyToId: string | null
+  isEdited: boolean
+  editedAt: string | null
+  createdAt: string
+}
+
+export interface DmConversation {
+  id: string
+  isGroup: boolean
+  name: string | null
+  participants: Array<{ user: PublicUser }>
+  createdAt: string
+}
+
 export interface MessageAttachment {
   id: string
   messageId: string
