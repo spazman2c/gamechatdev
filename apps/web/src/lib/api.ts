@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/auth'
+import type { PublicUser } from '@nexora/types'
 
 const BASE_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001/api'
 
@@ -34,15 +35,19 @@ export function getOrRefreshToken(): Promise<string | null> {
   })
     .then(async (res) => {
       if (!res.ok) {
-        useAuthStore.getState().clearAuth()
+        // 401/403 means the refresh token is genuinely expired — log out
+        if (res.status === 401 || res.status === 403) {
+          useAuthStore.getState().clearAuth()
+        }
         return null
       }
-      const data = await res.json() as { accessToken: string }
-      useAuthStore.getState().setAuth(data.accessToken, useAuthStore.getState().user!)
+      const data = await res.json() as { accessToken: string; user: PublicUser }
+      useAuthStore.getState().setAuth(data.accessToken, data.user)
       return data.accessToken
     })
     .catch(() => {
-      useAuthStore.getState().clearAuth()
+      // Network error (offline, server down) — do NOT log out, just return null
+      // The user will be retried on the next action
       return null
     })
     .finally(() => { pendingRefresh = null })

@@ -26,6 +26,7 @@ export function AppShell({ children }: AppShellProps) {
   // Start as true if a token is already in the store (e.g. soft nav after first load).
   // Only false on a cold hard-refresh where the token needs to be fetched first.
   const [tokenReady, setTokenReady] = useState(() => !!useAuthStore.getState().accessToken)
+  const [refreshFailed, setRefreshFailed] = useState(false)
 
   useEffect(() => {
     const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true))
@@ -37,9 +38,15 @@ export function AppShell({ children }: AppShellProps) {
   // the single shared refresh promise resolves — no spinner, no 401s.
   useEffect(() => {
     if (!hydrated || !isAuthenticated || tokenReady) return
+    setRefreshFailed(false)
     getOrRefreshToken().then((token) => {
-      if (token) setTokenReady(true)
-      // if null → clearAuth was called → isAuthenticated becomes false → redirect below
+      if (token) {
+        setTokenReady(true)
+      } else if (useAuthStore.getState().isAuthenticated) {
+        // null but still authenticated = network error (not a logout)
+        setRefreshFailed(true)
+      }
+      // if isAuthenticated is now false, clearAuth was called → redirect below handles it
     })
   }, [hydrated, isAuthenticated, tokenReady])
 
@@ -47,7 +54,30 @@ export function AppShell({ children }: AppShellProps) {
     if (hydrated && !isAuthenticated) router.push('/login')
   }, [hydrated, isAuthenticated, router])
 
-  if (!hydrated || !isAuthenticated || !tokenReady) return null
+  if (!hydrated || !isAuthenticated) return null
+
+  if (!tokenReady) {
+    if (refreshFailed) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen bg-[var(--surface-base)] gap-4">
+          <p className="text-[var(--text-muted)] text-sm">Unable to connect. Check your connection and try again.</p>
+          <button
+            onClick={() => {
+              setRefreshFailed(false)
+              getOrRefreshToken().then((token) => {
+                if (token) setTokenReady(true)
+                else if (useAuthStore.getState().isAuthenticated) setRefreshFailed(true)
+              })
+            }}
+            className="px-4 py-2 text-sm bg-[var(--accent-primary)] text-white rounded-[var(--radius-sm)] hover:bg-[var(--accent-primary-light)] transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )
+    }
+    return null
+  }
   return <AppShellInner>{children}</AppShellInner>
 }
 

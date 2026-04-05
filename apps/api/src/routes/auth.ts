@@ -143,7 +143,6 @@ export async function authRoutes(app: FastifyInstance) {
       throw Errors.TOKEN_EXPIRED()
     }
 
-    // Verify token exists in DB (rotation check)
     const tokenHash = createHash('sha256').update(refreshToken).digest('hex')
     const storedToken = await db.query.refreshTokens.findFirst({
       where: and(
@@ -154,11 +153,6 @@ export async function authRoutes(app: FastifyInstance) {
 
     if (!storedToken) { throw Errors.TOKEN_INVALID() }
 
-    // Delete old, issue new (rotation)
-    await db.delete(schema.refreshTokens).where(
-      eq(schema.refreshTokens.id, storedToken.id),
-    )
-
     const user = await db.query.users.findFirst({
       where: eq(schema.users.id, payload.sub),
     })
@@ -167,16 +161,41 @@ export async function authRoutes(app: FastifyInstance) {
     const newJti = nanoid(21)
     const newAccessToken = signAccessToken({ sub: user.id, username: user.username })
     const newRefreshToken = signRefreshToken({ sub: user.id, jti: newJti })
-
     const newTokenHash = createHash('sha256').update(newRefreshToken).digest('hex')
+
+    // Issue new token first, THEN delete old one.
+    // This prevents the race where two simultaneous refreshes cause one to fail
+    // because the first rotation already deleted the shared old token.
     await db.insert(schema.refreshTokens).values({
       userId: user.id,
       tokenHash: newTokenHash,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     })
+    await db.delete(schema.refreshTokens).where(
+      eq(schema.refreshTokens.id, storedToken.id),
+    )
+
+    // Prune any other expired tokens for this user (housekeeping, non-fatal)
+    db.delete(schema.refreshTokens).where(
+      and(
+        eq(schema.refreshTokens.userId, user.id),
+        lt(schema.refreshTokens.expiresAt, new Date()),
+      ),
+    ).catch(() => {/* ignore */})
 
     reply.setCookie(REFRESH_COOKIE, newRefreshToken, COOKIE_OPTIONS)
-    return reply.send({ accessToken: newAccessToken })
+
+    // Return user data so the client never relies on potentially stale cached user
+    return reply.send({
+      accessToken: newAccessToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        presence: user.presence,
+      },
+    })
   })
 
   // POST /api/auth/logout
