@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { Hash, Megaphone, Users, Search, Bell, Pin } from 'lucide-react'
 import { useHubStore } from '@/store/hub'
 import { useAuthStore } from '@/store/auth'
 import { useHubUI } from '@/store/hub-ui'
+import { useNotificationCenter } from '@/store/notification-center'
 import { useChannelMessages } from '@/hooks/use-channel-messages'
 import { ChatFeed } from '@/components/chat/chat-feed'
 import { MessageInput } from '@/components/chat/message-input'
@@ -23,6 +24,9 @@ export default function StreamPage() {
   const isAnnouncement = channel?.type === 'announcement'
   const isOwner = hub?.ownerId === user?.id
   const isReadOnly = isAnnouncement && !isOwner
+
+  const clearMention = useNotificationCenter((s) => s.clearMention)
+  useEffect(() => { clearMention(channelId) }, [channelId, clearMention])
 
   const { isLoading, hasNextPage, loadMore } = useChannelMessages(channelId)
 

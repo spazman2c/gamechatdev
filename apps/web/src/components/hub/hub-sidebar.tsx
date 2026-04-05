@@ -29,6 +29,7 @@ import { useVoiceSession } from '@/contexts/voice-session-context'
 import { PRESENCE_COLORS } from '@nexora/types'
 import { api } from '@/lib/api'
 import { useHubUI } from '@/store/hub-ui'
+import { useNotificationCenter } from '@/store/notification-center'
 import type { Channel, ChannelType, PresenceStatus } from '@nexora/types'
 import { HubMenu } from './hub-menu'
 import { CreateChannelModal } from '@/components/modals/create-channel-modal'
@@ -279,6 +280,7 @@ function ChannelRow({
   pathname: string
   participants: VoiceParticipant[]
 }) {
+  const mentionCount = useNotificationCenter((s) => s.mentionedChannels[channel.id] ?? 0)
   const isVoice = channel.type === 'voice' || channel.type === 'video' || channel.type === 'stage'
   const href = isVoice
     ? `/app/hub/${hubId}/room/${channel.id}`
@@ -342,7 +344,9 @@ function ChannelRow({
             'group',
             isActive
               ? 'bg-[var(--surface-active)] text-[var(--text-primary)]'
-              : 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)]',
+              : mentionCount > 0
+                ? 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+                : 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)]',
           )}
         >
           <span
@@ -353,9 +357,16 @@ function ChannelRow({
           >
             {CHANNEL_ICONS[channel.type]}
           </span>
-          <span className="truncate flex-1 text-left">{channel.name}</span>
+          <span className={cn('truncate flex-1 text-left', mentionCount > 0 && !isActive && 'font-semibold')}>
+            {channel.name}
+          </span>
           {channel.isNsfw && (
             <Lock className="h-3 w-3 text-[var(--text-muted)] shrink-0" aria-label="NSFW" />
+          )}
+          {mentionCount > 0 && !isActive && (
+            <span className="shrink-0 h-4 w-4 rounded-full bg-[var(--functional-error)] text-white text-[9px] font-bold flex items-center justify-center leading-none">
+              {mentionCount > 9 ? '9+' : mentionCount}
+            </span>
           )}
         </button>
       )}

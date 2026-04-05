@@ -137,7 +137,7 @@ export async function messageRoutes(app: FastifyInstance) {
             title: `${authorName} mentioned you`,
             body: content.slice(0, 100),
             referenceUrl: channel?.hubId ? `/app/hub/${channel.hubId}` : undefined,
-            referenceId: message.id,
+            referenceId: channelId,
           })
         }
       }

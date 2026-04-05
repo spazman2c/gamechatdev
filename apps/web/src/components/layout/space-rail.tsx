@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { Avatar } from '@nexora/ui/avatar'
 import { useAuthStore } from '@/store/auth'
 import { useHubStore } from '@/store/hub'
+import { useDmStore } from '@/store/dm'
 import { useJoinedHubs } from '@/hooks/use-hub'
 import { CreateHubModal } from '@/components/modals/create-hub-modal'
 import { NotificationBell } from '@/components/notifications/notification-bell'
@@ -20,6 +21,8 @@ export function SpaceRail() {
   const pathname = usePathname()
   const { user } = useAuthStore()
   const { joinedHubs } = useHubStore()
+  const unreadCounts = useDmStore((s) => s.unreadCounts)
+  const totalDmUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0)
 
   return (
     <nav
@@ -31,13 +34,23 @@ export function SpaceRail() {
       aria-label="Your spaces"
     >
       {/* DMs */}
-      <RailIcon
-        href="/app/dms"
-        label="Direct Messages"
-        active={pathname.startsWith('/app/dms')}
-      >
-        <MessageSquare className="h-5 w-5" />
-      </RailIcon>
+      <div className="relative">
+        <RailIcon
+          href="/app/dms"
+          label="Direct Messages"
+          active={pathname.startsWith('/app/dms')}
+        >
+          <MessageSquare className="h-5 w-5" />
+        </RailIcon>
+        {totalDmUnread > 0 && (
+          <span
+            className="pointer-events-none absolute -bottom-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--functional-error)] text-white text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-[var(--surface-base)]"
+            aria-hidden="true"
+          >
+            {totalDmUnread > 99 ? '99+' : totalDmUnread}
+          </span>
+        )}
+      </div>
 
       {/* Divider */}
       <div className="w-8 h-px bg-[var(--border-subtle)] my-1" aria-hidden="true" />

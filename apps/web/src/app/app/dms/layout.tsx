@@ -101,6 +101,7 @@ function ConversationItem({
   active: boolean
 }) {
   const router = useRouter()
+  const unread = useDmStore((s) => s.unreadCounts[conversation.id] ?? 0)
 
   // For 1:1 DMs, show the OTHER participant
   const other = conversation.participants?.find((p) => p.user.id !== currentUserId)?.user
@@ -116,7 +117,9 @@ function ConversationItem({
         'flex items-center gap-2.5 w-full px-2 py-2 rounded-[var(--radius-xs)] transition-colors text-left',
         active
           ? 'bg-[var(--surface-active)] text-[var(--text-primary)]'
-          : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]',
+          : unread > 0
+            ? 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]',
       )}
       aria-current={active ? 'page' : undefined}
     >
@@ -128,9 +131,16 @@ function ConversationItem({
         presenceColor={presenceColor}
       />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{displayName}</p>
+        <p className={cn('text-sm truncate', unread > 0 ? 'font-semibold' : 'font-medium')}>
+          {displayName}
+        </p>
         <p className="text-[11px] text-[var(--text-muted)] truncate">@{other.username}</p>
       </div>
+      {unread > 0 && (
+        <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--functional-error)] text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          {unread > 99 ? '99+' : unread}
+        </span>
+      )}
     </button>
   )
 }

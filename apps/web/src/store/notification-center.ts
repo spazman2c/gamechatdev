@@ -4,6 +4,8 @@ import type { AppNotification } from '@nexora/types'
 interface NotificationCenterStore {
   notifications: AppNotification[]
   unreadCount: number
+  // channelId → unread mention count
+  mentionedChannels: Record<string, number>
 
   setNotifications: (items: AppNotification[], unreadCount: number) => void
   addNotification: (item: AppNotification) => void
@@ -11,11 +13,14 @@ interface NotificationCenterStore {
   markAllRead: () => void
   removeNotification: (id: string) => void
   clearAll: () => void
+  addMention: (channelId: string) => void
+  clearMention: (channelId: string) => void
 }
 
 export const useNotificationCenter = create<NotificationCenterStore>((set) => ({
   notifications: [],
   unreadCount: 0,
+  mentionedChannels: {},
 
   setNotifications: (notifications, unreadCount) => set({ notifications, unreadCount }),
 
@@ -51,4 +56,19 @@ export const useNotificationCenter = create<NotificationCenterStore>((set) => ({
     }),
 
   clearAll: () => set({ notifications: [], unreadCount: 0 }),
+
+  addMention: (channelId) =>
+    set((s) => ({
+      mentionedChannels: {
+        ...s.mentionedChannels,
+        [channelId]: (s.mentionedChannels[channelId] ?? 0) + 1,
+      },
+    })),
+
+  clearMention: (channelId) =>
+    set((s) => {
+      const next = { ...s.mentionedChannels }
+      delete next[channelId]
+      return { mentionedChannels: next }
+    }),
 }))

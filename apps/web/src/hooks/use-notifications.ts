@@ -5,13 +5,16 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { getSocket } from './use-socket'
 import { useNotificationCenter } from '@/store/notification-center'
+import { useDmStore } from '@/store/dm'
 import { useAuthStore } from '@/store/auth'
 import { playNotificationSound, playMentionSound } from '@/lib/notification-sound'
 import type { AppNotification, NotificationSettings } from '@nexora/types'
 
 export function useNotifications() {
-  const { setNotifications, addNotification } = useNotificationCenter()
+  const { setNotifications, addNotification, addMention } = useNotificationCenter()
+  const incrementUnread = useDmStore((s) => s.incrementUnread)
   const user = useAuthStore((s) => s.user)
+
 
   // Fetch on mount
   const { data } = useQuery({
@@ -24,10 +27,19 @@ export function useNotifications() {
   })
 
   useEffect(() => {
-    if (data) {
-      setNotifications(data.notifications, data.unreadCount)
+    if (!data) { return }
+    setNotifications(data.notifications, data.unreadCount)
+
+    // Seed DM unreads and channel mentions from persisted unread notifications
+    for (const notif of data.notifications) {
+      if (notif.read || !notif.referenceId) { continue }
+      if (notif.type === 'dm_message') {
+        incrementUnread(notif.referenceId)
+      } else if (notif.type === 'mention') {
+        addMention(notif.referenceId)
+      }
     }
-  }, [data, setNotifications])
+  }, [data, setNotifications, incrementUnread, addMention])
 
   // Sync sound preference from server on load
   const { data: settingsData } = useQuery({
@@ -54,6 +66,13 @@ export function useNotifications() {
       // Only handle notifications for the current user
       if (notif.userId !== user?.id) { return }
       addNotification(notif)
+
+      // Track DM unread counts and channel mentions
+      if (notif.type === 'dm_message' && notif.referenceId) {
+        incrementUnread(notif.referenceId)
+      } else if (notif.type === 'mention' && notif.referenceId) {
+        addMention(notif.referenceId)
+      }
 
       // Play sound based on type
       // Sound settings are stored in the server; we check them via the store

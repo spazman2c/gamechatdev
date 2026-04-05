@@ -5,6 +5,8 @@ interface DmStore {
   conversations: DmConversation[]
   // conversationId → messages (newest last)
   messages: Record<string, DmMessage[]>
+  // conversationId → unread count
+  unreadCounts: Record<string, number>
 
   setConversations: (convs: DmConversation[]) => void
   upsertConversation: (conv: DmConversation) => void
@@ -13,11 +15,14 @@ interface DmStore {
   addMessage: (conversationId: string, message: DmMessage) => void
   updateMessage: (conversationId: string, messageId: string, partial: Partial<DmMessage>) => void
   removeMessage: (conversationId: string, messageId: string) => void
+  incrementUnread: (conversationId: string) => void
+  clearUnread: (conversationId: string) => void
 }
 
 export const useDmStore = create<DmStore>((set) => ({
   conversations: [],
   messages: {},
+  unreadCounts: {},
 
   setConversations: (conversations) => set({ conversations }),
 
@@ -67,4 +72,19 @@ export const useDmStore = create<DmStore>((set) => ({
         [conversationId]: (s.messages[conversationId] ?? []).filter((m) => m.id !== messageId),
       },
     })),
+
+  incrementUnread: (conversationId) =>
+    set((s) => ({
+      unreadCounts: {
+        ...s.unreadCounts,
+        [conversationId]: (s.unreadCounts[conversationId] ?? 0) + 1,
+      },
+    })),
+
+  clearUnread: (conversationId) =>
+    set((s) => {
+      const next = { ...s.unreadCounts }
+      delete next[conversationId]
+      return { unreadCounts: next }
+    }),
 }))

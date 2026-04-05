@@ -30,6 +30,12 @@ export default function DmConversationPage({
   const [replyTo, setReplyTo] = useState<DmMessage | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
 
+  // Clear unread badge when conversation is opened
+  const clearUnread = useDmStore((s) => s.clearUnread)
+  useEffect(() => {
+    clearUnread(conversationId)
+  }, [conversationId, clearUnread])
+
   // Load messages via hook (handles socket + fetching)
   const { isLoading, hasNextPage, loadMore } = useDmMessages(conversationId)
   const messages = allMessages[conversationId] ?? EMPTY_MESSAGES
