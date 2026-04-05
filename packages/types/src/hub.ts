@@ -17,10 +17,15 @@ export interface Hub {
   description: string | null
   iconUrl: string | null
   bannerUrl: string | null
+  bannerColor: string | null
   atmosphere: AtmosphereId
   isPublic: boolean
   joinPolicy: JoinPolicy
   memberCount: number
+  verificationLevel: number
+  contentFilter: number
+  isCommunity: boolean
+  systemChannelId: string | null
   createdAt: string
 }
 

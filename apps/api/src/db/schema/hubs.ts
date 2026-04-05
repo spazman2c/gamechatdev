@@ -9,6 +9,7 @@ import {
   index,
   primaryKey,
   pgEnum,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import { users } from './users.js'
@@ -47,6 +48,12 @@ export const hubs = pgTable(
     isPublic: boolean('is_public').notNull().default(true),
     joinPolicy: joinPolicyEnum('join_policy').notNull().default('open'),
     memberCount: integer('member_count').notNull().default(0),
+    // Extended settings
+    verificationLevel: integer('verification_level').notNull().default(0),
+    contentFilter: integer('content_filter').notNull().default(0),
+    isCommunity: boolean('is_community').notNull().default(false),
+    bannerColor: varchar('banner_color', { length: 7 }),
+    systemChannelId: uuid('system_channel_id'), // soft ref to channels (no FK to avoid circular)
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
   },
   (table) => ({
@@ -124,5 +131,41 @@ export const hubBans = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.hubId, table.userId] }),
+  }),
+)
+
+export const hubEmoji = pgTable(
+  'hub_emoji',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    hubId: uuid('hub_id')
+      .notNull()
+      .references(() => hubs.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 32 }).notNull(),
+    url: text('url').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
+  },
+  (table) => ({
+    hubIdx: index('hub_emoji_hub_idx').on(table.hubId),
+    nameIdx: uniqueIndex('hub_emoji_name_idx').on(table.hubId, table.name),
+  }),
+)
+
+export const hubStickers = pgTable(
+  'hub_stickers',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    hubId: uuid('hub_id')
+      .notNull()
+      .references(() => hubs.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 32 }).notNull(),
+    description: varchar('description', { length: 100 }),
+    url: text('url').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
+  },
+  (table) => ({
+    hubIdx: index('hub_stickers_hub_idx').on(table.hubId),
   }),
 )

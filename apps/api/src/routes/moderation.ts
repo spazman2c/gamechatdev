@@ -81,8 +81,17 @@ export async function moderationRoutes(app: FastifyInstance) {
   // GET /api/hubs/:hubId/bans
   app.get('/:hubId/bans', { preHandler: requireAuth }, async (req) => {
     const { hubId } = req.params as { hubId: string }
+
+    const hub = await db.query.hubs.findFirst({ where: eq(schema.hubs.id, hubId) })
+    if (!hub) { throw Errors.HUB_NOT_FOUND() }
+    if (hub.ownerId !== req.userId) { throw Errors.FORBIDDEN() }
+
     const bans = await db.query.hubBans.findMany({
       where: eq(schema.hubBans.hubId, hubId),
+      with: {
+        user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
+      },
+      orderBy: (b, { desc }) => desc(b.createdAt),
     })
     return { bans }
   })

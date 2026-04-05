@@ -244,4 +244,90 @@ export async function hubRoutes(app: FastifyInstance) {
     return { channels }
   })
 
+  // ── Emoji ──
+
+  // GET /api/hubs/:hubId/emoji
+  app.get('/:hubId/emoji', { preHandler: requireAuth }, async (req) => {
+    const { hubId } = req.params as { hubId: string }
+    const emoji = await db.query.hubEmoji.findMany({
+      where: eq(schema.hubEmoji.hubId, hubId),
+      orderBy: (e, { asc }) => asc(e.name),
+    })
+    return { emoji }
+  })
+
+  // POST /api/hubs/:hubId/emoji
+  app.post('/:hubId/emoji', { preHandler: requireAuth }, async (req, reply) => {
+    const { hubId } = req.params as { hubId: string }
+    const { name, url } = req.body as { name?: string; url?: string }
+
+    if (!name || !url) { throw Errors.VALIDATION_ERROR({ name: 'name and url required' }) }
+
+    const hub = await db.query.hubs.findFirst({ where: eq(schema.hubs.id, hubId) })
+    if (!hub) { throw Errors.HUB_NOT_FOUND() }
+    if (hub.ownerId !== req.userId) { throw Errors.FORBIDDEN() }
+
+    const [emoji] = await db
+      .insert(schema.hubEmoji)
+      .values({ hubId, name: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'), url, createdBy: req.userId })
+      .returning()
+
+    return reply.code(201).send(emoji)
+  })
+
+  // DELETE /api/hubs/:hubId/emoji/:emojiId
+  app.delete('/:hubId/emoji/:emojiId', { preHandler: requireAuth }, async (req, reply) => {
+    const { hubId, emojiId } = req.params as { hubId: string; emojiId: string }
+
+    const hub = await db.query.hubs.findFirst({ where: eq(schema.hubs.id, hubId) })
+    if (!hub) { throw Errors.HUB_NOT_FOUND() }
+    if (hub.ownerId !== req.userId) { throw Errors.FORBIDDEN() }
+
+    await db.delete(schema.hubEmoji).where(and(eq(schema.hubEmoji.id, emojiId), eq(schema.hubEmoji.hubId, hubId)))
+    return reply.code(204).send()
+  })
+
+  // ── Stickers ──
+
+  // GET /api/hubs/:hubId/stickers
+  app.get('/:hubId/stickers', { preHandler: requireAuth }, async (req) => {
+    const { hubId } = req.params as { hubId: string }
+    const stickers = await db.query.hubStickers.findMany({
+      where: eq(schema.hubStickers.hubId, hubId),
+      orderBy: (s, { asc }) => asc(s.name),
+    })
+    return { stickers }
+  })
+
+  // POST /api/hubs/:hubId/stickers
+  app.post('/:hubId/stickers', { preHandler: requireAuth }, async (req, reply) => {
+    const { hubId } = req.params as { hubId: string }
+    const { name, url, description } = req.body as { name?: string; url?: string; description?: string }
+
+    if (!name || !url) { throw Errors.VALIDATION_ERROR({ name: 'name and url required' }) }
+
+    const hub = await db.query.hubs.findFirst({ where: eq(schema.hubs.id, hubId) })
+    if (!hub) { throw Errors.HUB_NOT_FOUND() }
+    if (hub.ownerId !== req.userId) { throw Errors.FORBIDDEN() }
+
+    const [sticker] = await db
+      .insert(schema.hubStickers)
+      .values({ hubId, name, url, description: description ?? null, createdBy: req.userId })
+      .returning()
+
+    return reply.code(201).send(sticker)
+  })
+
+  // DELETE /api/hubs/:hubId/stickers/:stickerId
+  app.delete('/:hubId/stickers/:stickerId', { preHandler: requireAuth }, async (req, reply) => {
+    const { hubId, stickerId } = req.params as { hubId: string; stickerId: string }
+
+    const hub = await db.query.hubs.findFirst({ where: eq(schema.hubs.id, hubId) })
+    if (!hub) { throw Errors.HUB_NOT_FOUND() }
+    if (hub.ownerId !== req.userId) { throw Errors.FORBIDDEN() }
+
+    await db.delete(schema.hubStickers).where(and(eq(schema.hubStickers.id, stickerId), eq(schema.hubStickers.hubId, hubId)))
+    return reply.code(204).send()
+  })
+
 }

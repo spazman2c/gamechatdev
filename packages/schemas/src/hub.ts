@@ -20,7 +20,15 @@ export const CreateHubSchema = z.object({
   atmosphere: z.enum(ATMOSPHERES).default('orbit'),
 })
 
-export const UpdateHubSchema = CreateHubSchema.partial()
+export const UpdateHubSchema = CreateHubSchema.partial().extend({
+  iconUrl: z.string().url().nullable().optional(),
+  bannerUrl: z.string().url().nullable().optional(),
+  bannerColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+  verificationLevel: z.number().int().min(0).max(4).optional(),
+  contentFilter: z.number().int().min(0).max(2).optional(),
+  isCommunity: z.boolean().optional(),
+  systemChannelId: z.string().uuid().nullable().optional(),
+})
 
 export const CreateZoneSchema = z.object({
   name: z.string().min(1).max(100),

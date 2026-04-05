@@ -12,4 +12,4 @@ RUN npm run build --workspace=@nexora/schemas
 RUN npm run build --workspace=@nexora/types
 RUN npm run build --workspace=@nexora/api
 
-CMD ["npm", "run", "start", "--workspace=@nexora/api"]
+CMD ["node", "apps/api/dist/index.js"]

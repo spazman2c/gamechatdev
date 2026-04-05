@@ -17,6 +17,8 @@ import {
   zones,
   invites,
   hubBans,
+  hubEmoji,
+  hubStickers,
 } from './schema/hubs.js'
 import {
   channels,
@@ -71,7 +73,19 @@ export const hubsRelations = relations(hubs, ({ one, many }) => ({
   roles: many(roles),
   invites: many(invites),
   bans: many(hubBans),
+  emoji: many(hubEmoji),
+  stickers: many(hubStickers),
   modActions: many(modActions),
+}))
+
+export const hubEmojiRelations = relations(hubEmoji, ({ one }) => ({
+  hub: one(hubs, { fields: [hubEmoji.hubId], references: [hubs.id] }),
+  creator: one(users, { fields: [hubEmoji.createdBy], references: [users.id] }),
+}))
+
+export const hubStickersRelations = relations(hubStickers, ({ one }) => ({
+  hub: one(hubs, { fields: [hubStickers.hubId], references: [hubs.id] }),
+  creator: one(users, { fields: [hubStickers.createdBy], references: [users.id] }),
 }))
 
 export const hubMembersRelations = relations(hubMembers, ({ one }) => ({

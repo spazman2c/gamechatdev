@@ -19,6 +19,7 @@ import { roleRoutes } from './routes/roles.js'
 import { moderationRoutes } from './routes/moderation.js'
 import { uploadRoutes } from './routes/uploads.js'
 import { socialRoutes } from './routes/social.js'
+import { runStartupMigrations } from './db/migrate-startup.js'
 import { createServer } from 'http'
 
 const server = Fastify({
@@ -35,6 +36,9 @@ const server = Fastify({
 })
 
 async function bootstrap() {
+  // ── Run startup DB migrations ──
+  await runStartupMigrations()
+
   // ── Try Redis (non-fatal) ──
   await connectRedis()
 
