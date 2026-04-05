@@ -61,6 +61,14 @@ const MIGRATIONS = [
     notif_sounds boolean NOT NULL DEFAULT true,
     notif_desktop boolean NOT NULL DEFAULT false
   )`,
+
+  // Role system — new columns
+  `ALTER TABLE roles ADD COLUMN IF NOT EXISTS icon text`,
+  `ALTER TABLE roles ADD COLUMN IF NOT EXISTS hoist boolean NOT NULL DEFAULT false`,
+  `ALTER TABLE roles ADD COLUMN IF NOT EXISTS mentionable boolean NOT NULL DEFAULT false`,
+
+  // memberRoles — assignedAt timestamp
+  `ALTER TABLE member_roles ADD COLUMN IF NOT EXISTS assigned_at timestamptz NOT NULL DEFAULT now()`,
 ]
 
 export async function runStartupMigrations() {

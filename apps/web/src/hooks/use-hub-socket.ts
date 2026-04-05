@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSocket } from '@/hooks/use-socket'
 import { useHubStore, type VoiceParticipant } from '@/store/hub'
 
 export function useHubSocket(hubId: string | null) {
   const { emit, on } = useSocket()
   const { setVoiceParticipants, addVoiceParticipant, removeVoiceParticipant } = useHubStore()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     if (!hubId) { return }
@@ -36,11 +38,19 @@ export function useHubSocket(hubId: string | null) {
       },
     )
 
+    const offRolesUpdated = on<unknown>(
+      'hub:roles_updated',
+      () => {
+        queryClient.invalidateQueries({ queryKey: ['roles', hubId] })
+      },
+    )
+
     return () => {
       emit('hub:leave', { hubId })
       offSnapshot()
       offJoined()
       offLeft()
+      offRolesUpdated()
     }
   // emit and on are stable useCallback refs; include hubId as the only real dep
   // eslint-disable-next-line react-hooks/exhaustive-deps

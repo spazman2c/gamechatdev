@@ -67,8 +67,11 @@ export const roles = pgTable(
       .references(() => hubs.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 64 }).notNull(),
     color: varchar('color', { length: 7 }),
+    icon: text('icon'),
     position: integer('position').notNull().default(0),
     isDefault: boolean('is_default').notNull().default(false),
+    hoist: boolean('hoist').notNull().default(false),
+    mentionable: boolean('mentionable').notNull().default(false),
     permissions: bigint('permissions', { mode: 'number' }).notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
   },
@@ -89,6 +92,7 @@ export const memberRoles = pgTable(
     roleId: uuid('role_id')
       .notNull()
       .references(() => roles.id, { onDelete: 'cascade' }),
+    assignedAt: timestamp('assigned_at', { withTimezone: true }).notNull().default(sql`now()`),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.hubId, table.userId, table.roleId] }),

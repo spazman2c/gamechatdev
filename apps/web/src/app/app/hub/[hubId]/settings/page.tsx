@@ -261,10 +261,16 @@ export default function HubSettingsPage() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-8 py-8">
-          {renderTab()}
-        </div>
+      <main className={cn('flex-1 overflow-hidden', activeTab === 'roles' ? 'flex flex-col' : 'overflow-y-auto')}>
+        {activeTab === 'roles' ? (
+          <div className="flex flex-col h-full px-8 py-8">
+            <RolesTab hubId={hubId} />
+          </div>
+        ) : (
+          <div className="max-w-2xl mx-auto px-8 py-8">
+            {renderTab()}
+          </div>
+        )}
       </main>
     </div>
   )
