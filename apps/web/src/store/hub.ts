@@ -33,6 +33,7 @@ interface HubStore {
   updateHub: (partial: Partial<Hub>) => void
   addChannel: (channel: Channel) => void
   removeChannel: (channelId: string) => void
+  addZone: (zone: Zone) => void
   clear: () => void
 
   setVoiceParticipants: (channelId: string, participants: VoiceParticipant[]) => void
@@ -79,6 +80,9 @@ export const useHubStore = create<HubStore>((set) => ({
 
   removeChannel: (channelId) =>
     set((state) => ({ channels: state.channels.filter((c) => c.id !== channelId) })),
+
+  addZone: (zone) =>
+    set((state) => ({ zones: [...state.zones, zone] })),
 
   clear: () =>
     set({

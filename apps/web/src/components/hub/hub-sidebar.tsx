@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
@@ -10,8 +11,6 @@ import {
   Megaphone,
   ChevronDown,
   ChevronRight,
-  Settings,
-  UserPlus,
   Lock,
   PhoneOff,
   Mic,
@@ -30,8 +29,10 @@ import { useVoiceSession } from '@/contexts/voice-session-context'
 import { PRESENCE_COLORS } from '@nexora/types'
 import { api } from '@/lib/api'
 import { useHubUI } from '@/store/hub-ui'
-import { openInviteModal } from '@/store/invite-modal'
 import type { Channel, ChannelType, PresenceStatus } from '@nexora/types'
+import { HubMenu } from './hub-menu'
+import { CreateChannelModal } from '@/components/modals/create-channel-modal'
+import { CreateCategoryModal } from '@/components/modals/create-category-modal'
 
 const CHANNEL_ICONS: Record<ChannelType, React.ReactNode> = {
   text:         <Hash className="h-4 w-4 shrink-0" />,
@@ -45,6 +46,20 @@ export function HubSidebar({ hubId }: { hubId: string }) {
   const pathname = usePathname()
   const { hub, zones, channels, collapsedZones, toggleZone, voiceParticipants } = useHubStore()
   const { user } = useAuthStore()
+  const [showCreateChannel, setShowCreateChannel] = useState(false)
+  const [showCreateCategory, setShowCreateCategory] = useState(false)
+
+  // Listen for menu events dispatched by HubMenu
+  useEffect(() => {
+    const onCreateChannel = () => setShowCreateChannel(true)
+    const onCreateCategory = () => setShowCreateCategory(true)
+    window.addEventListener('hub:create-channel', onCreateChannel)
+    window.addEventListener('hub:create-category', onCreateCategory)
+    return () => {
+      window.removeEventListener('hub:create-channel', onCreateChannel)
+      window.removeEventListener('hub:create-category', onCreateCategory)
+    }
+  }, [])
 
   if (!hub) { return null }
 
@@ -53,32 +68,18 @@ export function HubSidebar({ hubId }: { hubId: string }) {
 
   return (
     <div className="flex flex-col h-full" data-atmosphere={hub.atmosphere}>
-      {/* Hub header */}
-      <div className="flex items-center justify-between px-3 py-3 border-b border-[var(--border-subtle)] shrink-0">
-        <h2 className="font-brand font-semibold text-sm text-[var(--text-primary)] truncate">
-          {hub.name}
-        </h2>
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => openInviteModal(hubId, hub.name)}
-            className="h-7 w-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
-            aria-label="Invite people"
-            title="Invite People"
-          >
-            <UserPlus className="h-4 w-4" />
-          </button>
-          {isOwner && (
-            <Link
-              href={`/app/hub/${hubId}/settings`}
-              className="h-7 w-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
-              aria-label="Hub settings"
-              title="Hub Settings"
-            >
-              <Settings className="h-4 w-4" />
-            </Link>
-          )}
-        </div>
+      {/* Hub header — clicking name opens dropdown menu */}
+      <div className="flex items-center border-b border-[var(--border-subtle)] shrink-0">
+        <HubMenu hubId={hubId} hubName={hub.name} isOwner={isOwner} />
       </div>
+
+      {/* Modals */}
+      {showCreateChannel && (
+        <CreateChannelModal hubId={hubId} onClose={() => setShowCreateChannel(false)} />
+      )}
+      {showCreateCategory && (
+        <CreateCategoryModal hubId={hubId} onClose={() => setShowCreateCategory(false)} />
+      )}
 
       {/* Channel list */}
       <nav className="flex-1 overflow-y-auto py-2 px-1 scrollbar-none" aria-label="Channels">
