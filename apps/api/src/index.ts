@@ -113,7 +113,7 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  console.error('Failed to start server:', err)
+  console.error('Failed to start server:', err instanceof Error ? err.stack : err)
   process.exit(1)
 })
 
