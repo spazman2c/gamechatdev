@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { PRESENCE_COLORS } from '@nexora/types'
 import type { PresenceStatus } from '@nexora/types'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+const APP_URL = typeof window !== 'undefined' ? window.location.origin : ''
 
 interface Friend {
   id: string
